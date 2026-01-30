@@ -398,33 +398,70 @@ document.addEventListener('DOMContentLoaded', async () => {
         const profileForm = document.getElementById('profileForm');
         if (profileForm) {
             const userEmail = session?.user?.email || localStorage.getItem('user');
+            console.log('Loading Profile for:', userEmail);
+
             if (userEmail) {
-                const { data: profile } = await supabase.from('profiles').select('*').eq('email', userEmail).single();
+                try {
+                    const { data: profile, error } = await supabase
+                        .from('profiles')
+                        .select('*')
+                        .eq('email', userEmail)
+                        .single();
 
-                if (profile) {
-                    document.getElementById('firstName').value = profile.first_name || '';
-                    document.getElementById('lastName').value = profile.last_name || '';
-                    document.getElementById('phone').value = profile.phone || '';
-                    document.getElementById('address').value = profile.address || '';
-                    document.getElementById('city').value = profile.city || '';
+                    if (error) {
+                        console.error('Database error fetching profile:', error);
+                        alert('Could not load profile data: ' + error.message);
+                    } else if (profile) {
+                        console.log('Profile Data Fetched:', profile);
 
-                    // Make read-only for non-admins
-                    if (profile.role !== 'admin') {
-                        const inputs = profileForm.querySelectorAll('input');
-                        inputs.forEach(input => input.readOnly = true);
-                        const submitBtn = profileForm.querySelector('button[type="submit"]');
-                        if (submitBtn) {
-                            submitBtn.textContent = 'Read Only (Contact Admin to Edit)';
-                            submitBtn.disabled = true;
-                            submitBtn.style.opacity = '0.5';
-                            submitBtn.style.cursor = 'not-allowed';
+                        // Map all fields from DB to UI
+                        const fieldMap = {
+                            'firstName': profile.first_name,
+                            'lastName': profile.last_name,
+                            'dob': profile.dob,
+                            'gender': profile.gender,
+                            'bloodGroup': profile.blood_group,
+                            'medicalIssues': profile.medical_issues,
+                            'phone': profile.phone,
+                            'whatsappNumber': profile.whatsapp_number,
+                            'address': profile.address,
+                            'city': profile.city,
+                            'state': profile.state,
+                            'pincode': profile.pincode
+                        };
+
+                        Object.entries(fieldMap).forEach(([id, value]) => {
+                            const el = document.getElementById(id);
+                            if (el) {
+                                el.value = value || '';
+                                // Trigger label update for custom inputs
+                                if (value) el.dispatchEvent(new Event('input', { bubbles: true }));
+                            }
+                        });
+
+                        // Make read-only for non-admins
+                        if (profile.role !== 'admin') {
+                            const inputs = profileForm.querySelectorAll('input, select');
+                            inputs.forEach(input => input.readOnly = true);
+                            const submitBtn = profileForm.querySelector('button[type="submit"]');
+                            if (submitBtn) {
+                                submitBtn.textContent = 'Read Only (Contact Admin to Edit)';
+                                submitBtn.disabled = true;
+                                submitBtn.style.opacity = '0.5';
+                                submitBtn.style.cursor = 'not-allowed';
+                            }
                         }
+                    } else {
+                        console.warn('No profile record found for:', userEmail);
                     }
+                } catch (err) {
+                    console.error('Unexpected error loading profile:', err);
                 }
 
                 profileForm.onsubmit = async (e) => {
                     e.preventDefault();
-                    // Only admins reach here if the button isn't disabled, but just as a safeguard:
+
+                    // Only admins reach here if the button isn't disabled
                     const { data: check } = await supabase.from('profiles').select('role').eq('email', userEmail).single();
                     if (check?.role !== 'admin') {
                         alert('Only administrators can modify profile data.');
@@ -434,15 +471,25 @@ document.addEventListener('DOMContentLoaded', async () => {
                     const updates = {
                         first_name: document.getElementById('firstName').value,
                         last_name: document.getElementById('lastName').value,
+                        dob: document.getElementById('dob').value,
+                        gender: document.getElementById('gender').value,
+                        blood_group: document.getElementById('bloodGroup').value,
+                        medical_issues: document.getElementById('medicalIssues').value,
                         phone: document.getElementById('phone').value,
+                        whatsapp_number: document.getElementById('whatsappNumber').value,
                         address: document.getElementById('address').value,
                         city: document.getElementById('city').value,
+                        state: document.getElementById('state').value,
+                        pincode: document.getElementById('pincode').value
                     };
 
                     const { error } = await supabase.from('profiles').update(updates).eq('email', userEmail);
                     if (error) alert('Error updating profile: ' + error.message);
                     else alert('Profile updated successfully!');
                 };
+            } else {
+                console.error('No user email found for profile page');
+                window.location.href = 'login.html';
             }
         }
     }
@@ -452,7 +499,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (loginForm) {
         loginForm.onsubmit = async (e) => {
             e.preventDefault();
-            const email = document.getElementById('email').value;
+            const email = document.getElementById('email').value.toLowerCase().trim();
             const password = document.getElementById('password').value;
             const submitBtn = loginForm.querySelector('button[type="submit"]');
 
@@ -497,7 +544,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             const processingDiv = document.getElementById('signupProcessing');
 
             try {
-                const email = document.getElementById('email').value;
+                const email = document.getElementById('email').value.toLowerCase().trim();
                 const password = document.getElementById('password').value;
 
                 submitBtn.disabled = true;
