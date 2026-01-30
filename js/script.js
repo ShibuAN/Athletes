@@ -9,6 +9,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     console.log('Athletes Website Loaded');
 
+    // Global Page Identification (Handles .html and clean URLs)
+    let pageId = window.location.pathname.split('/').pop() || 'index.html';
+    if (pageId.endsWith('.html')) pageId = pageId.replace('.html', '');
+    if (pageId === '' || pageId === '/') pageId = 'index';
+
     // --- 0. Global Date Input Enhancements (Type & Calendar) ---
     function initializeDateInputs() {
         const dateFields = document.querySelectorAll('input[id*="dob"], input[id*="Date"], input[id*="date"], .input-field[placeholder*="YYYY"]');
@@ -62,9 +67,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     // --- 1. Consolidated Session & Redirect Logic ---
     async function initSession() {
         const { data: { session } } = await supabase.auth.getSession();
-        const currentPage = window.location.pathname.split('/').pop() || 'index.html';
-        const isAuthPage = ['login.html', 'signup.html', 'login_v2.html', 'signup_v2.html'].includes(currentPage);
-        const protectedPages = ['dashboard.html', 'dashboard_v2.html', 'admin_dashboard.html', 'admin_events.html', 'admin_users.html', 'admin_payments.html', 'activities.html', 'profile.html', 'leaderboard.html', 'register_event.html'];
+
+        const isAuthPage = ['login', 'signup', 'login_v2', 'signup_v2'].includes(pageId);
+        const protectedPages = ['dashboard', 'dashboard_v2', 'admin_dashboard', 'admin_events', 'admin_users', 'admin_payments', 'activities', 'profile', 'leaderboard', 'register_event'];
 
         if (session) {
             localStorage.setItem('user', session.user.email);
@@ -81,18 +86,22 @@ document.addEventListener('DOMContentLoaded', async () => {
                 } else {
                     window.location.href = 'dashboard.html';
                 }
-                return;
+                return session;
             }
         } else {
-            if (protectedPages.includes(currentPage)) {
+            if (protectedPages.includes(pageId)) {
                 window.location.href = 'login.html';
-                return;
+                return null;
             }
         }
 
         updateNavbar(session);
         if (session) fetchDashboardData(session.user.email);
+        return session;
     }
+
+    // Run session check FIRST
+    const session = await initSession();
 
     // --- 2. Dynamic Navbar Logic ---
     function updateNavbar(session) {
@@ -100,16 +109,15 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (!navLinks) return;
 
         const user = session?.user;
-        const currentPage = window.location.pathname.split('/').pop() || 'index.html';
-        const isHomePage = currentPage === 'index.html' || currentPage === '';
-        const isAdminPage = currentPage.startsWith('admin_');
+        const isHomePage = pageId === 'index';
+        const isAdminPage = pageId.startsWith('admin_');
         const currentHash = window.location.hash;
 
         let navHtml = `
             <a href="index.html" class="nav-link ${isHomePage && !currentHash ? 'active' : ''}" data-nav="home">Home</a>
             <a href="${isHomePage ? '#membership' : 'index.html#membership'}" class="nav-link ${currentHash === '#membership' ? 'active' : ''}" data-nav="membership">Membership</a>
             <a href="${isHomePage ? '#community' : 'index.html#community'}" class="nav-link ${currentHash === '#community' ? 'active' : ''}" data-nav="community">Community</a>
-            <a href="events.html" class="nav-link ${currentPage === 'events.html' ? 'active' : ''}">Events</a>
+            <a href="events.html" class="nav-link ${pageId === 'events' ? 'active' : ''}">Events</a>
         `;
 
         if (user) {
@@ -384,55 +392,58 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
+
     // Profile Page Logic
-    if (window.location.pathname.includes('profile.html')) {
+    if (pageId === 'profile') {
         const profileForm = document.getElementById('profileForm');
         if (profileForm) {
-            const userEmail = localStorage.getItem('user');
-            const { data: profile } = await supabase.from('profiles').select('*').eq('email', userEmail).single();
+            const userEmail = session?.user?.email || localStorage.getItem('user');
+            if (userEmail) {
+                const { data: profile } = await supabase.from('profiles').select('*').eq('email', userEmail).single();
 
-            if (profile) {
-                document.getElementById('firstName').value = profile.first_name || '';
-                document.getElementById('lastName').value = profile.last_name || '';
-                document.getElementById('phone').value = profile.phone || '';
-                document.getElementById('address').value = profile.address || '';
-                document.getElementById('city').value = profile.city || '';
+                if (profile) {
+                    document.getElementById('firstName').value = profile.first_name || '';
+                    document.getElementById('lastName').value = profile.last_name || '';
+                    document.getElementById('phone').value = profile.phone || '';
+                    document.getElementById('address').value = profile.address || '';
+                    document.getElementById('city').value = profile.city || '';
 
-                // Make read-only for non-admins
-                if (profile.role !== 'admin') {
-                    const inputs = profileForm.querySelectorAll('input');
-                    inputs.forEach(input => input.readOnly = true);
-                    const submitBtn = profileForm.querySelector('button[type="submit"]');
-                    if (submitBtn) {
-                        submitBtn.textContent = 'Read Only (Contact Admin to Edit)';
-                        submitBtn.disabled = true;
-                        submitBtn.style.opacity = '0.5';
-                        submitBtn.style.cursor = 'not-allowed';
+                    // Make read-only for non-admins
+                    if (profile.role !== 'admin') {
+                        const inputs = profileForm.querySelectorAll('input');
+                        inputs.forEach(input => input.readOnly = true);
+                        const submitBtn = profileForm.querySelector('button[type="submit"]');
+                        if (submitBtn) {
+                            submitBtn.textContent = 'Read Only (Contact Admin to Edit)';
+                            submitBtn.disabled = true;
+                            submitBtn.style.opacity = '0.5';
+                            submitBtn.style.cursor = 'not-allowed';
+                        }
                     }
                 }
-            }
 
-            profileForm.onsubmit = async (e) => {
-                e.preventDefault();
-                // Only admins reach here if the button isn't disabled, but just as a safeguard:
-                const { data: check } = await supabase.from('profiles').select('role').eq('email', userEmail).single();
-                if (check?.role !== 'admin') {
-                    alert('Only administrators can modify profile data.');
-                    return;
-                }
+                profileForm.onsubmit = async (e) => {
+                    e.preventDefault();
+                    // Only admins reach here if the button isn't disabled, but just as a safeguard:
+                    const { data: check } = await supabase.from('profiles').select('role').eq('email', userEmail).single();
+                    if (check?.role !== 'admin') {
+                        alert('Only administrators can modify profile data.');
+                        return;
+                    }
 
-                const updates = {
-                    first_name: document.getElementById('firstName').value,
-                    last_name: document.getElementById('lastName').value,
-                    phone: document.getElementById('phone').value,
-                    address: document.getElementById('address').value,
-                    city: document.getElementById('city').value,
+                    const updates = {
+                        first_name: document.getElementById('firstName').value,
+                        last_name: document.getElementById('lastName').value,
+                        phone: document.getElementById('phone').value,
+                        address: document.getElementById('address').value,
+                        city: document.getElementById('city').value,
+                    };
+
+                    const { error } = await supabase.from('profiles').update(updates).eq('email', userEmail);
+                    if (error) alert('Error updating profile: ' + error.message);
+                    else alert('Profile updated successfully!');
                 };
-
-                const { error } = await supabase.from('profiles').update(updates).eq('email', userEmail);
-                if (error) alert('Error updating profile: ' + error.message);
-                else alert('Profile updated successfully!');
-            };
+            }
         }
     }
 
@@ -552,7 +563,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         };
     }
 
-    await initSession();
 
     // ==========================================
     // ADMIN: Create User Logic
