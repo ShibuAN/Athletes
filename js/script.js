@@ -122,8 +122,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         if (user) {
             navHtml += `
-                <a href="leaderboard.html" class="nav-link ${currentPage === 'leaderboard.html' ? 'active' : ''}">Leaderboard</a>
-                <a href="dashboard.html" class="nav-link ${currentPage === 'dashboard.html' ? 'active' : ''}">Dashboard</a>
+                <a href="leaderboard.html" class="nav-link ${pageId === 'leaderboard' ? 'active' : ''}">Leaderboard</a>
+                <a href="dashboard.html" class="nav-link ${pageId === 'dashboard' ? 'active' : ''}">Dashboard</a>
                 <a href="#" id="logoutBtn" class="nav-link">Logout</a>
             `;
             // Add Admin link if user is admin
@@ -144,7 +144,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             });
         } else {
             navHtml += `
-                <a href="login.html" class="nav-link ${currentPage === 'login.html' ? 'active' : ''}">Login</a>
+                <a href="login.html" class="nav-link ${pageId === 'login' ? 'active' : ''}">Login</a>
                 <a href="signup.html" class="btn btn-primary btn-sm">Sign Up</a>
             `;
         }
