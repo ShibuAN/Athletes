@@ -129,6 +129,17 @@
 
         .date-group .input-field {
             padding: 0.8rem;
+            padding-right: 2.8rem;
+        }
+
+        .date-icon {
+            position: absolute;
+            right: 1rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-muted);
+            pointer-events: none;
+            font-size: 1.1rem;
         }
 
         /* Toast Notification Styles */
@@ -250,13 +261,19 @@
                     <div style="display: grid; grid-template-columns: 1fr; gap: 0.5rem;">
                         <div class="input-group date-group">
                             <label for="startDate" class="input-label">Start Date & Time (YYYY-MM-DD HH:MM)</label>
-                            <input type="text" id="startDate" class="input-field" placeholder=" " required>
-                            <i class="fas fa-calendar-alt date-icon"></i>
+                            <div style="position: relative;">
+                                <input type="text" id="startDate" class="input-field" placeholder=" " required
+                                    style="padding-right: 2.8rem;">
+                                <i class="fas fa-calendar-alt date-icon"></i>
+                            </div>
                         </div>
                         <div class="input-group date-group">
                             <label for="endDate" class="input-label">End Date & Time (YYYY-MM-DD HH:MM)</label>
-                            <input type="text" id="endDate" class="input-field" placeholder=" ">
-                            <i class="fas fa-calendar-alt date-icon"></i>
+                            <div style="position: relative;">
+                                <input type="text" id="endDate" class="input-field" placeholder=" "
+                                    style="padding-right: 2.8rem;">
+                                <i class="fas fa-calendar-alt date-icon"></i>
+                            </div>
                         </div>
                     </div>
 
@@ -311,7 +328,7 @@
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" crossorigin></script>
     <script src="js/supabase.js"></script>
-    <script src="js/script.js?v=1.7"></script>
+    <script src="js/script.js?v=2.1"></script>
     <script>
         document.addEventListener('DOMContentLoaded', async () => {
             const supabase = window.supabaseClient;
