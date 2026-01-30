@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Activities - Athletes</title>
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        .activities-container {
+            padding-top: calc(var(--header-height) + 2rem);
+            padding-bottom: 4rem;
+        }
+
+        .activity-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1.5rem;
+            border-bottom: 1px solid var(--border);
+            transition: background 0.3s;
+        }
+
+        .activity-item:hover {
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        .activity-info h4 {
+            margin: 0;
+            color: var(--text-main);
+        }
+
+        .activity-info p {
+            margin: 0.2rem 0;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+
+        .activity-stats {
+            text-align: right;
+        }
+
+        .stat-main {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        .stat-sub {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+    </style>
+</head>
+
+<body>
+    <div class="bg-glow"></div>
+
+    <nav class="navbar">
+        <a href="index.html" class="nav-logo">ATHLETES</a>
+        <div class="nav-links">
+            <a href="index.html" class="nav-link">Home</a>
+            <a href="events.html" class="nav-link">Events</a>
+            <a href="leaderboard.html" class="nav-link">Leaderboard</a>
+            <a href="dashboard.html" class="nav-link">Dashboard</a>
+            <a href="#" id="logoutBtn" class="nav-link">Logout</a>
+        </div>
+    </nav>
+
+    <div class="container activities-container">
+        <div class="glass-card">
+            <header style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+                <h2 class="text-gradient">All Activities</h2>
+                <a href="dashboard.html" class="btn btn-outline btn-sm">Back to Dashboard</a>
+            </header>
+
+            <div id="fullActivityList">
+                <div style="text-align: center; padding: 3rem; color: var(--text-muted);">
+                    Loading your activities...
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" crossorigin></script>
+    <script src="js/supabase.js"></script>
+    <script src="js/script.js?v=1.7"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            const supabase = window.supabaseClient;
+            const listEl = document.getElementById('fullActivityList');
+            const user = localStorage.getItem('user');
+
+            if (!user) return;
+
+            async function loadAllActivities() {
+                try {
+                    const { data: acts, error } = await supabase
+                        .from('strava_activities')
+                        .select('*')
+                        .eq('user_email', user)
+                        .order('start_date', { ascending: false });
+
+                    if (error) throw error;
+
+                    if (acts && acts.length > 0) {
+                        listEl.innerHTML = acts.map(act => `
+                            <div class="activity-item">
+                                <div class="activity-info">
+                                    <h4>${act.name || act.type}</h4>
+                                    <p>${act.type} • ${new Date(act.start_date).toLocaleDateString()} at ${new Date(act.start_date).toLocaleTimeString()}</p>
+                                </div>
+                                <div class="activity-stats">
+                                    <div class="stat-main">${(act.distance / 1000).toFixed(2)} km</div>
+                                    <div class="stat-sub">${Math.floor(act.moving_time / 60)}m ${act.moving_time % 60}s</div>
+                                </div>
+                            </div>
+                        `).join('');
+                    } else {
+                        listEl.innerHTML = '<div style="text-align: center; padding: 4rem; color: var(--text-muted);">No synced activities found. Connect Strava to see your stats here!</div>';
+                    }
+                } catch (err) {
+                    console.error('Error loading activities:', err);
+                    listEl.innerHTML = '<div style="text-align: center; color: #ef4444; padding: 2rem;">Error loading your activities.</div>';
+                }
+            }
+
+            loadAllActivities();
+        });
+    </script>
+</body>
+
+</html>

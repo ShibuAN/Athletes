@@ -1,0 +1,614 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin - Manage Events</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        .admin-container {
+            padding-top: calc(var(--header-height) + 2rem);
+            padding-bottom: 4rem;
+        }
+
+        .admin-grid {
+            display: grid;
+            grid-template-columns: 1fr 1.5fr;
+            gap: 2rem;
+            margin-top: 2rem;
+        }
+
+        @media (max-width: 992px) {
+            .admin-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .form-section {
+            position: sticky;
+            top: calc(var(--header-height) + 2rem);
+            height: fit-content;
+        }
+
+        .event-list-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1.5rem;
+            border-bottom: 1px solid var(--border);
+            transition: background 0.3s;
+        }
+
+        .event-list-item:last-child {
+            border-bottom: none;
+        }
+
+        .event-list-item:hover {
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        .event-info h4 {
+            margin: 0;
+            color: var(--text-main);
+        }
+
+        .event-info p {
+            margin: 0.2rem 0;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+
+        .event-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .btn-sm {
+            padding: 0.5rem 1rem;
+            font-size: 0.8rem;
+        }
+
+        .badge {
+            padding: 0.2rem 0.6rem;
+            border-radius: 1rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .badge-upcoming {
+            background: rgba(34, 197, 94, 0.1);
+            color: #22c55e;
+            border: 1px solid rgba(34, 197, 94, 0.2);
+        }
+
+        .badge-past {
+            background: rgba(239, 68, 68, 0.1);
+            color: #ef4444;
+            border: 1px solid rgba(239, 68, 68, 0.2);
+        }
+
+        .registrations-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            backdrop-filter: blur(5px);
+        }
+
+        .modal-content {
+            width: 90%;
+            max-width: 600px;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        /* Clearer layout for date/time inputs */
+        .input-group.date-group {
+            margin-top: 1.5rem;
+            margin-bottom: 1.5rem;
+            position: relative;
+        }
+
+        .date-group .input-label {
+            position: static;
+            display: block;
+            margin-bottom: 0.5rem;
+            font-size: 0.85rem;
+            color: var(--primary);
+            font-weight: 600;
+            transform: none !important;
+        }
+
+        .date-group .input-field {
+            padding: 0.8rem;
+        }
+
+        /* Toast Notification Styles */
+        .toast-notification {
+            position: fixed;
+            top: 100px;
+            right: 20px;
+            background: linear-gradient(135deg, #22c55e, #16a34a);
+            color: white;
+            padding: 1.5rem 2rem;
+            border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(34, 197, 94, 0.4);
+            z-index: 10000;
+            display: none;
+            align-items: center;
+            gap: 1rem;
+            min-width: 300px;
+            animation: slideIn 0.4s ease-out;
+            backdrop-filter: blur(10px);
+        }
+
+        .toast-notification.show {
+            display: flex;
+        }
+
+        .toast-notification.error {
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+            box-shadow: 0 10px 40px rgba(239, 68, 68, 0.4);
+        }
+
+        .toast-icon {
+            font-size: 2rem;
+            line-height: 1;
+        }
+
+        .toast-content {
+            flex: 1;
+        }
+
+        .toast-title {
+            font-weight: 700;
+            font-size: 1.1rem;
+            margin-bottom: 0.25rem;
+        }
+
+        .toast-message {
+            font-size: 0.9rem;
+            opacity: 0.95;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        @keyframes slideOut {
+            from {
+                transform: translateX(0);
+                opacity: 1;
+            }
+
+            to {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+        }
+
+        .toast-notification.hiding {
+            animation: slideOut 0.4s ease-in forwards;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="bg-glow"></div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="toast-notification">
+        <div class="toast-icon" id="toastIcon">✓</div>
+        <div class="toast-content">
+            <div class="toast-title" id="toastTitle">Success!</div>
+            <div class="toast-message" id="toastMessage">Operation completed successfully</div>
+        </div>
+    </div>
+
+    <nav class="navbar">
+        <a href="index.html" class="nav-logo">ATHLETES</a>
+        <div class="nav-links">
+            <!-- Dynamically loaded by script.js -->
+        </div>
+    </nav>
+
+    <div class="container admin-container">
+        <div class="admin-grid">
+            <!-- Form Section -->
+            <div class="glass-card form-section">
+                <h2 id="formTitle" class="text-gradient" style="margin-bottom: 1.5rem;">Add New Event</h2>
+                <form id="eventForm">
+                    <input type="hidden" id="eventId">
+
+                    <div class="input-group">
+                        <input type="text" id="name" class="input-field" placeholder=" " required>
+                        <label for="name" class="input-label">Event Name</label>
+                    </div>
+
+                    <div class="input-group">
+                        <textarea id="description" class="input-field" style="height: 100px; padding-top: 1rem;"
+                            placeholder=" " required></textarea>
+                        <label for="description" class="input-label">Description</label>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr; gap: 0.5rem;">
+                        <div class="input-group date-group">
+                            <label for="startDate" class="input-label">Start Date & Time (YYYY-MM-DD HH:MM)</label>
+                            <input type="text" id="startDate" class="input-field" placeholder=" " required>
+                            <i class="fas fa-calendar-alt date-icon"></i>
+                        </div>
+                        <div class="input-group date-group">
+                            <label for="endDate" class="input-label">End Date & Time (YYYY-MM-DD HH:MM)</label>
+                            <input type="text" id="endDate" class="input-field" placeholder=" ">
+                            <i class="fas fa-calendar-alt date-icon"></i>
+                        </div>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                        <div class="input-group">
+                            <input type="number" id="price" class="input-field" placeholder=" " required step="0.01">
+                            <label for="price" class="input-label">Price (₹)</label>
+                        </div>
+                        <div class="input-group">
+                            <input type="number" id="maxParticipants" class="input-field" placeholder=" " required>
+                            <label for="maxParticipants" class="input-label">Max Participants</label>
+                        </div>
+                    </div>
+
+                    <div class="input-group">
+                        <input type="url" id="imageUrl" class="input-field" placeholder=" ">
+                        <label for="imageUrl" class="input-label">Image URL (Optional)</label>
+                    </div>
+
+                    <div style="display: flex; gap: 1rem; margin-top: 1rem;">
+                        <button type="submit" id="saveBtn" class="btn btn-primary" style="flex: 2;">Save Event</button>
+                        <button type="button" id="cancelBtn" class="btn btn-outline"
+                            style="flex: 1; display: none;">Cancel</button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- List Section -->
+            <div class="glass-card">
+                <h2 class="text-gradient" style="margin-bottom: 1.5rem;">Existing Events</h2>
+                <div id="eventsListContent">
+                    <div style="text-align: center; padding: 2rem; color: var(--text-muted);">
+                        Loading events...
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Registrations Modal -->
+    <div id="regModal" class="registrations-modal">
+        <div class="glass-card modal-content">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                <h3 id="modalEventName">Registrations</h3>
+                <button id="closeModal" class="btn btn-outline btn-sm">Close</button>
+            </div>
+            <div id="registrationsList">
+                <!-- Reg items will go here -->
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" crossorigin></script>
+    <script src="js/supabase.js"></script>
+    <script src="js/script.js?v=1.7"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            const supabase = window.supabaseClient;
+            const eventForm = document.getElementById('eventForm');
+            const eventsListContent = document.getElementById('eventsListContent');
+            const saveBtn = document.getElementById('saveBtn');
+            const cancelBtn = document.getElementById('cancelBtn');
+            const formTitle = document.getElementById('formTitle');
+            const eventIdInput = document.getElementById('eventId');
+
+            const regModal = document.getElementById('regModal');
+            const closeModal = document.getElementById('closeModal');
+            const nominationsList = document.getElementById('registrationsList');
+            const modalEventName = document.getElementById('modalEventName');
+
+            // Toast Notification Function
+            function showToast(title, message, type = 'success') {
+                const toast = document.getElementById('toast');
+                const toastIcon = document.getElementById('toastIcon');
+                const toastTitle = document.getElementById('toastTitle');
+                const toastMessage = document.getElementById('toastMessage');
+
+                // Set content
+                toastTitle.textContent = title;
+                toastMessage.textContent = message;
+
+                // Set icon and style based on type
+                if (type === 'success') {
+                    toastIcon.textContent = '✓';
+                    toast.classList.remove('error');
+                } else if (type === 'error') {
+                    toastIcon.textContent = '✕';
+                    toast.classList.add('error');
+                }
+
+                // Show toast
+                toast.classList.remove('hiding');
+                toast.classList.add('show');
+
+                // Auto hide after 4 seconds
+                setTimeout(() => {
+                    toast.classList.add('hiding');
+                    setTimeout(() => {
+                        toast.classList.remove('show', 'hiding');
+                    }, 400);
+                }, 4000);
+            }
+
+            // Check Admin Access
+            async function checkAdmin() {
+                // Get the current session
+                const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+
+                if (!session) {
+                    window.location.href = 'login.html';
+                    return;
+                }
+
+                const userEmail = session.user.email;
+
+                // Check if user is admin
+                const { data, error } = await supabase
+                    .from('profiles')
+                    .select('role')
+                    .eq('email', userEmail)
+                    .single();
+
+                if (error || data?.role !== 'admin') {
+                    alert('Access Denied. Admins only.');
+                    await supabase.auth.signOut();
+                    window.location.href = 'index.html';
+                    return;
+                }
+
+                // If admin, show content
+                loadEvents();
+            }
+
+            // Fetch and show events
+            async function loadEvents() {
+                const { data, error } = await supabase
+                    .from('events')
+                    .select('*')
+                    .order('start_date', { ascending: false });
+
+                if (error) {
+                    console.error('Error fetching events:', error);
+                    return;
+                }
+
+                if (data.length === 0) {
+                    eventsListContent.innerHTML = '<div style="text-align: center; padding: 2rem; color: var(--text-muted);">No events found.</div>';
+                    return;
+                }
+
+                eventsListContent.innerHTML = data.map(event => {
+                    // Check if event is truly past - use end_date if available, otherwise start_date
+                    const now = new Date();
+                    let isPast = false;
+
+                    if (event.end_date) {
+                        // If event has end date, check if it has ended
+                        isPast = new Date(event.end_date) < now;
+                    } else {
+                        // If no end date, check if start date has passed
+                        isPast = new Date(event.start_date) < now;
+                    }
+
+                    const sd = new Date(event.start_date).toLocaleString();
+                    const ed = event.end_date ? new Date(event.end_date).toLocaleString() : 'N/A';
+
+                    return `
+                        <div class="event-list-item">
+                            <div class="event-info">
+                                <h4>${event.name}</h4>
+                                <p><strong>Starts:</strong> ${sd}</p>
+                                <p><strong>Ends:</strong> ${ed}</p>
+                                <p>₹${event.price} | max: ${event.max_participants}</p>
+                                <span class="badge ${isPast ? 'badge-past' : 'badge-upcoming'}">${isPast ? 'Past' : 'Upcoming'}</span>
+                            </div>
+                            <div class="event-actions">
+                                <button class="btn btn-outline btn-sm" onclick="viewRegistrations('${event.id}', '${event.name.replace(/'/g, "\\'")}')">Registrations</button>
+                                <button class="btn btn-primary btn-sm" onclick="editEvent('${event.id}')">Edit</button>
+                                <button class="btn btn-secondary btn-sm" style="background: rgba(239, 68, 68, 0.2); color: #ef4444; border-color: rgba(239, 68, 68, 0.3);" onclick="deleteEvent('${event.id}')">Del</button>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            }
+
+            // Save event (Add/Update)
+            eventForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+
+                const eventData = {
+                    name: document.getElementById('name').value,
+                    description: document.getElementById('description').value,
+                    start_date: document.getElementById('startDate').value,
+                    end_date: document.getElementById('endDate').value || null,
+                    price: parseFloat(document.getElementById('price').value),
+                    max_participants: parseInt(document.getElementById('maxParticipants').value),
+                    image_url: document.getElementById('imageUrl').value || null
+                };
+
+                const id = eventIdInput.value;
+
+                try {
+                    if (id) {
+                        // Update
+                        const { error } = await supabase.from('events').update(eventData).eq('id', id);
+                        if (error) throw error;
+                        showToast('Event Updated!', `${eventData.name} has been updated successfully.`, 'success');
+                    } else {
+                        // Create
+                        const { error } = await supabase.from('events').insert([eventData]);
+                        if (error) throw error;
+                        showToast('Event Created!', `${eventData.name} has been created successfully.`, 'success');
+                    }
+
+                    resetForm();
+                    loadEvents();
+                } catch (error) {
+                    showToast('Error', 'Failed to save event: ' + error.message, 'error');
+                }
+            });
+
+            // Edit event
+            window.editEvent = async (id) => {
+                const { data, error } = await supabase.from('events').select('*').eq('id', id).single();
+                if (error) return;
+
+                formTitle.textContent = 'Edit Event';
+                eventIdInput.value = data.id;
+                document.getElementById('name').value = data.name;
+                document.getElementById('description').value = data.description;
+
+                // Format dates for datetime-local input
+                // Simple helper to format for input
+                const toInputFormat = (dateStr) => {
+                    const date = new Date(dateStr);
+                    date.setMinutes(date.getMinutes() - date.getTimezoneOffset());
+                    return date.toISOString().slice(0, 16);
+                };
+
+                document.getElementById('startDate').value = toInputFormat(data.start_date);
+                document.getElementById('endDate').value = data.end_date ? toInputFormat(data.end_date) : '';
+
+                document.getElementById('price').value = data.price;
+                document.getElementById('maxParticipants').value = data.max_participants;
+                document.getElementById('imageUrl').value = data.image_url || '';
+
+                saveBtn.textContent = 'Update Event';
+                cancelBtn.style.display = 'block';
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            };
+
+            // Delete event
+            window.deleteEvent = async (id) => {
+                if (!confirm('Are you sure you want to delete this event? This will also delete all registrations.')) return;
+
+                const { error } = await supabase.from('events').delete().eq('id', id);
+                if (error) {
+                    alert('Error deleting event: ' + error.message);
+                } else {
+                    loadEvents();
+                }
+            };
+
+            // View registrations
+            window.viewRegistrations = async (id, name) => {
+                modalEventName.textContent = `Registrations: ${name}`;
+                regModal.style.display = 'flex';
+                nominationsList.innerHTML = '<div style="text-align: center; padding: 1rem;">Loading...</div>';
+
+                const { data, error } = await supabase
+                    .from('event_registrations')
+                    .select('*')
+                    .eq('event_id', id)
+                    .order('registration_date', { ascending: false });
+
+                if (error) {
+                    nominationsList.innerHTML = 'Error loading registrations.';
+                    return;
+                }
+
+                if (data.length === 0) {
+                    nominationsList.innerHTML = '<div style="text-align: center; padding: 1rem;">No users registered yet.</div>';
+                    return;
+                }
+
+                nominationsList.innerHTML = data.map(reg => {
+                    const isPaid = reg.payment_status === 'paid';
+                    return `
+                    <div style="padding: 1rem; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <div style="font-weight: 600;">${reg.user_email}</div>
+                            <div style="font-size: 0.8rem; color: var(--text-muted);">${new Date(reg.registration_date).toLocaleDateString()}</div>
+                            <span class="badge" style="background: ${isPaid ? 'rgba(34, 197, 94, 0.1)' : 'rgba(234, 179, 8, 0.1)'}; color: ${isPaid ? '#22c55e' : '#eab308'}; border: 1px solid ${isPaid ? 'rgba(34, 197, 94, 0.2)' : 'rgba(234, 179, 8, 0.2)'}; margin-top: 0.5rem; display: inline-block;">
+                                ${isPaid ? 'PAID' : 'PENDING'}
+                            </span>
+                        </div>
+                        <button class="btn btn-sm ${isPaid ? 'btn-outline' : 'btn-primary'}" 
+                            onclick="togglePayment('${reg.id}', '${isPaid ? 'pending' : 'paid'}', '${id}', '${name.replace(/'/g, "\\'")}')">
+                            ${isPaid ? 'Mark Pending' : 'Approve Payment'}
+                        </button>
+                    </div>
+                `}).join('');
+            };
+
+            // Toggle Payment Status
+            window.togglePayment = async (regId, newStatus, eventId, eventName) => {
+                const { error } = await supabase
+                    .from('event_registrations')
+                    .update({ payment_status: newStatus })
+                    .eq('id', regId);
+
+                if (error) {
+                    alert('Error updating status: ' + error.message);
+                    return;
+                }
+
+                // Reload registrations list
+                viewRegistrations(eventId, eventName);
+            };
+
+            closeModal.onclick = () => regModal.style.display = 'none';
+
+            function resetForm() {
+                eventForm.reset();
+                eventIdInput.value = '';
+                formTitle.textContent = 'Add New Event';
+                saveBtn.textContent = 'Save Event';
+                cancelBtn.style.display = 'none';
+            }
+
+            cancelBtn.onclick = resetForm;
+
+            // Pre-populate description for Move Your Body 3.0 if name matches
+            document.getElementById('name').addEventListener('input', (e) => {
+                if (e.target.value.toLowerCase().includes('move your body') && !document.getElementById('description').value) {
+                    document.getElementById('description').value = `34 Days Challenge | 21 Days Consistency Required
+
+Goal: Complete at least one eligible activity per day for 21 days.
+
+Eligibility Criteria (Daily Min):
+- Walking/Running/Hiking: 3.0 KM
+- Cycling: 10.0 KM
+- Swimming: 500 Meters
+
+Note: If you do multiple activities, the system will choose one eligible activity to count for the day.`;
+                }
+            });
+
+            // Logout is handled globally by script.js
+            checkAdmin();
+        });
+    </script>
+</body>
+
+</html>

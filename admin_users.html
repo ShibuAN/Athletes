@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin - Manage Users</title>
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        .admin-container {
+            padding-top: calc(var(--header-height) + 2rem);
+            padding-bottom: 4rem;
+        }
+
+        .table-container {
+            overflow-x: auto;
+        }
+
+        .users-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .users-table th,
+        .users-table td {
+            text-align: left;
+            padding: 1rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .users-table th {
+            color: var(--text-muted);
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 0.8rem;
+        }
+
+        .users-table tr:hover {
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        .role-badge {
+            padding: 0.2rem 0.6rem;
+            border-radius: 1rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .role-admin {
+            background: rgba(168, 85, 247, 0.1);
+            color: #a855f7;
+            border: 1px solid rgba(168, 85, 247, 0.2);
+        }
+
+        .role-user {
+            background: rgba(14, 165, 233, 0.1);
+            color: #0ea5e9;
+            border: 1px solid rgba(14, 165, 233, 0.2);
+        }
+    </style>
+</head>
+
+<body>
+    <div class="bg-glow"></div>
+
+    <nav class="navbar">
+        <a href="index.html" class="nav-logo">ATHLETES</a>
+        <div class="nav-links">
+            <!-- Dynamically loaded by script.js -->
+        </div>
+    </nav>
+
+    <div class="container admin-container">
+        <div class="glass-card">
+            <h2 class="text-gradient" style="margin-bottom: 1.5rem;">User Management</h2>
+            <div class="table-container">
+                <table class="users-table">
+                    <thead>
+                        <tr>
+                            <th>Email</th>
+                            <th>Name</th>
+                            <th>Role</th>
+                            <th>Waitlist Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="usersList">
+                        <tr>
+                            <td colspan="5" style="text-align: center; padding: 2rem;">Loading users...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" crossorigin></script>
+    <script src="js/supabase.js"></script>
+    <script src="js/script.js?v=1.7"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            const supabase = window.supabaseClient;
+            const usersList = document.getElementById('usersList');
+            const logoutBtn = document.getElementById('logoutBtn');
+
+            // Check Admin Access
+            async function checkAdmin() {
+                // Get the current session
+                const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+
+                if (!session) {
+                    window.location.href = 'login.html';
+                    return;
+                }
+
+                const userEmail = session.user.email;
+
+                // Check if user is admin
+                const { data, error } = await supabase
+                    .from('profiles')
+                    .select('role')
+                    .eq('email', userEmail)
+                    .single();
+
+                if (error || data?.role !== 'admin') {
+                    alert('Access Denied. Admins only.');
+                    await supabase.auth.signOut();
+                    window.location.href = 'index.html';
+                    return;
+                }
+
+                loadUsers();
+            }
+
+            async function loadUsers() {
+                // Fetch all profiles
+                const { data, error } = await supabase
+                    .from('profiles')
+                    .select('*')
+                    .order('created_at', { ascending: false });
+
+                if (error) {
+                    console.error('Error fetching users:', error);
+                    usersList.innerHTML = '<tr><td colspan="5" style="color: #ef4444; text-align: center;">Error loading users.</td></tr>';
+                    return;
+                }
+
+                if (data.length === 0) {
+                    usersList.innerHTML = '<tr><td colspan="5" style="text-align: center;">No users found.</td></tr>';
+                    return;
+                }
+
+                usersList.innerHTML = data.map(user => {
+                    const isAdmin = user.role === 'admin';
+                    const name = `${user.first_name || ''} ${user.last_name || ''}`.trim() || 'N/A';
+
+                    return `
+                        <tr>
+                            <td>${user.email}</td>
+                            <td>${name}</td>
+                            <td>
+                                <span class="role-badge ${isAdmin ? 'role-admin' : 'role-user'}">
+                                    ${isAdmin ? 'ADMIN' : 'USER'}
+                                </span>
+                            </td>
+                             <td>
+                                ${user.waiting_list ? '<span style="color: #ef4444;">Waitlisted</span>' : '<span style="color: #22c55e;">Active</span>'}
+                            </td>
+                            <td>
+                                <button class="btn btn-sm ${isAdmin ? 'btn-outline' : 'btn-primary'}"
+                                    onclick="toggleAdmin('${user.email}', ${!isAdmin})">
+                                    ${isAdmin ? 'Revoke Admin' : 'Make Admin'}
+                                </button>
+                            </td>
+                        </tr>
+                    `;
+                }).join('');
+            }
+
+            window.toggleAdmin = async (email, makeAdmin) => {
+                if (makeAdmin && !confirm(`Are you sure you want to make ${email} an Admin? They will have full access.`)) return;
+                if (!makeAdmin && !confirm(`Revoke Admin access for ${email}?`)) return;
+
+                const newRole = makeAdmin ? 'admin' : 'user';
+
+                const { error } = await supabase
+                    .from('profiles')
+                    .update({ role: newRole })
+                    .eq('email', email);
+
+                if (error) {
+                    alert('Error updating role: ' + error.message);
+                } else {
+                    alert(`User role updated to ${newRole.toUpperCase()}`);
+                    loadUsers();
+                }
+            };
+
+            // Logout is handled globally by script.js
+            checkAdmin();
+        });
+    </script>
+</body>
+
+</html>

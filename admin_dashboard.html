@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - Athletes</title>
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        .admin-container {
+            padding-top: calc(var(--header-height) + 2rem);
+            padding-bottom: 4rem;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            text-align: center;
+            padding: 2rem;
+            transition: all 0.3s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+            border-color: var(--primary);
+            box-shadow: 0 10px 30px rgba(168, 85, 247, 0.2);
+        }
+
+        .stat-value {
+            font-size: 3rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .stat-label {
+            color: var(--text-muted);
+            margin-top: 0.5rem;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="bg-glow"></div>
+
+    <nav class="navbar">
+        <a href="index.html" class="nav-logo">ATHLETES</a>
+        <div class="nav-links">
+            <!-- Dynamically loaded by script.js -->
+        </div>
+    </nav>
+
+    <div class="container admin-container">
+        <h1 class="text-gradient" style="text-align: center; margin-bottom: 0.5rem;">Admin Dashboard</h1>
+        <p style="text-align: center; color: var(--text-muted); margin-bottom: 3rem;">
+            Welcome, <span id="adminName">...</span>
+        </p>
+
+        <!-- Stats Overview -->
+        <div class="stats-grid">
+            <a href="admin_users.html" class="glass-card stat-card animate-float" style="text-decoration: none;">
+                <div class="stat-value" id="totalUsers">-</div>
+                <div class="stat-label">Total Users</div>
+            </a>
+            <a href="admin_events.html" class="glass-card stat-card animate-float"
+                style="animation-delay: 0.1s; text-decoration: none;">
+                <div class="stat-value" id="totalEvents">-</div>
+                <div class="stat-label">Total Events</div>
+            </a>
+            <a href="admin_payments.html" class="glass-card stat-card animate-float"
+                style="animation-delay: 0.2s; text-decoration: none;">
+                <div class="stat-value" id="pendingPayments">-</div>
+                <div class="stat-label">Pending Payments</div>
+            </a>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" crossorigin></script>
+    <script src="js/supabase.js"></script>
+    <script src="js/script.js?v=1.6"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            const supabase = window.supabaseClient;
+            const adminNameEl = document.getElementById('adminName');
+            const totalUsersEl = document.getElementById('totalUsers');
+            const totalEventsEl = document.getElementById('totalEvents');
+            const pendingPaymentsEl = document.getElementById('pendingPayments');
+            const logoutBtn = document.getElementById('logoutBtn');
+
+            // Check Admin Access
+            async function checkAdmin() {
+                const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+
+                if (!session) {
+                    window.location.href = 'login.html';
+                    return;
+                }
+
+                const userEmail = session.user.email;
+
+                // Fetch profile to get first_name
+                const { data, error } = await supabase
+                    .from('profiles')
+                    .select('role, first_name')
+                    .eq('email', userEmail)
+                    .single();
+
+                if (error || data?.role !== 'admin') {
+                    alert('Access Denied. Admins only.');
+                    await supabase.auth.signOut();
+                    window.location.href = 'index.html';
+                    return;
+                }
+
+                adminNameEl.textContent = data.first_name || userEmail;
+
+                loadStats();
+            }
+
+            async function loadStats() {
+                try {
+                    const { count: userCount } = await supabase
+                        .from('profiles')
+                        .select('*', { count: 'exact', head: true });
+                    totalUsersEl.textContent = userCount || 0;
+
+                    const { count: eventCount } = await supabase
+                        .from('events')
+                        .select('*', { count: 'exact', head: true });
+                    totalEventsEl.textContent = eventCount || 0;
+
+                    const { count: pendingCount } = await supabase
+                        .from('event_registrations')
+                        .select('*', { count: 'exact', head: true })
+                        .eq('payment_status', 'pending');
+                    pendingPaymentsEl.textContent = pendingCount || 0;
+
+                } catch (err) {
+                    console.error('Error loading stats:', err);
+                }
+            }
+
+            // Logout is handled globally by script.js
+            checkAdmin();
+        });
+    </script>
+</body>
+
+</html>

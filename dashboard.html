@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Athletes</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: 280px 1fr;
+            gap: 2.5rem;
+            padding-top: calc(var(--header-height) + 2rem);
+            padding-bottom: 4rem;
+        }
+
+        .stat-card-link {
+            text-decoration: none;
+            display: block;
+            transition: transform 0.3s ease;
+        }
+
+        .stat-card-link:hover {
+            transform: translateY(-5px);
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, rgba(168, 85, 247, 0.15), rgba(6, 182, 212, 0.15));
+            border: 1px solid var(--primary);
+            text-align: center;
+            padding: 2.5rem 1.5rem;
+        }
+
+        .activity-count {
+            font-size: 4.5rem;
+            font-weight: 900;
+            line-height: 1;
+            margin: 1.5rem 0;
+            background: linear-gradient(to bottom, #fff, var(--text-muted));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .activity-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 1.25rem;
+            border-bottom: 1px solid var(--border);
+            transition: background 0.3s;
+        }
+
+        .activity-item:last-child {
+            border-bottom: none;
+        }
+
+        .activity-item:hover {
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        .profile-section h2 {
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .profile-section h3 {
+            font-size: 1.25rem;
+            color: var(--secondary);
+            margin-bottom: 0.5rem;
+        }
+
+        @media (max-width: 992px) {
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="bg-glow"></div>
+
+    <nav class="navbar">
+        <a href="index.html" class="nav-logo">ATHLETES</a>
+        <div class="nav-links">
+            <a href="index.html" class="nav-link">Home</a>
+            <a href="events.html" class="nav-link">Events</a>
+            <a href="leaderboard.html" class="nav-link">Leaderboard</a>
+            <a href="dashboard.html" class="nav-link active">Dashboard</a>
+            <a href="#" id="logoutBtn" class="nav-link">Logout</a>
+        </div>
+    </nav>
+
+    <div class="container" style="position: relative; z-index: 2;">
+        <header style="margin-bottom: 3rem; text-align: left;">
+            <h1 class="text-gradient" id="userName">...</h1>
+            <p style="color: var(--text-muted);">Track your progress and manage your elite journey.</p>
+        </header>
+
+        <div class="dashboard-grid">
+            <!-- Sidebar / Stats -->
+            <aside>
+                <a href="activities.html" class="stat-card-link" id="totalActivitiesLink">
+                    <div class="glass-card stat-card">
+                        <h3>Total Activities</h3>
+                        <div class="activity-count" id="totalActivities">0</div>
+                        <p style="color: var(--text-muted);">View all performances →</p>
+                    </div>
+                </a>
+
+                <div class="glass-card profile-section" style="margin-top: 2rem;">
+                    <h2>Profile</h2>
+                    <h3 id="hiUser">...</h3>
+
+                    <a href="profile.html" class="nav-link"
+                        style="font-size: 0.9rem; padding: 0.5rem 0; display: block; border-bottom: 1px solid var(--border); margin-bottom: 1rem;">View
+                        My Information</a>
+
+                    <h4
+                        style="margin-top: 1.5rem; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted);">
+                        Strava Connection</h4>
+                    <div id="stravaStatus" style="margin-top: 0.5rem; font-size: 0.9rem;">
+                        <span style="color: var(--text-muted);">Checking status...</span>
+                    </div>
+                </div>
+            </aside>
+
+            <!-- Main Content -->
+            <main>
+                <div class="glass-card" style="margin-bottom: 2.5rem;">
+                    <div
+                        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                        <h2 class="text-gradient">Enrolled Events</h2>
+                        <a href="events.html" class="btn btn-outline btn-sm">Join More</a>
+                    </div>
+                    <div id="enrolledEventsList">
+                        <div style="text-align: center; padding: 2rem; color: var(--text-muted);">
+                            Checking for event enrollments...
+                        </div>
+                    </div>
+                </div>
+
+                <div class="glass-card">
+                    <div
+                        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+                        <h2 class="text-gradient">Recent Performance</h2>
+                        <div style="display: flex; gap: 0.5rem;" id="stravaButtonsContainer">
+                            <button id="stravaToggleButton" class="btn btn-primary"
+                                style="font-size: 0.85rem; padding: 0.6rem 1.2rem;">
+                                Checking Status...
+                            </button>
+                        </div>
+                    </div>
+
+                    <div id="activityList">
+                        <div style="text-align: center; padding: 3rem; color: var(--text-muted);">
+                            No recent activities synced.
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" crossorigin></script>
+    <script src="js/supabase.js"></script>
+    <script src="js/strava_config.js"></script>
+    <script src="js/strava_api.js?v=1.1"></script>
+    <script src="js/script.js?v=1.7"></script>
+</body>
+
+</html>

@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Events - Athletes</title>
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        .event-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 2rem;
+            margin-top: 2rem;
+        }
+
+        .event-card {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+        }
+
+        .event-image {
+            height: 150px;
+            background: linear-gradient(to right, var(--primary), var(--secondary));
+            border-radius: 0.5rem;
+            margin-bottom: 1rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .event-image::after {
+            content: 'EVENT';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-weight: 800;
+            font-size: 2rem;
+            color: rgba(255, 255, 255, 0.2);
+            letter-spacing: 0.2em;
+        }
+
+        .event-date {
+            color: var(--primary);
+            font-weight: 600;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="bg-glow"></div>
+
+    <!-- Navigation -->
+    <nav class="navbar" id="mainNavbar">
+        <a href="index.html" class="nav-logo">ATHLETES</a>
+        <div class="nav-links">
+            <a href="index.html" class="nav-link">Home</a>
+            <a href="index.html#membership" class="nav-link">Membership</a>
+            <a href="index.html#community" class="nav-link">Community</a>
+            <a href="events.html" class="nav-link active">Events</a>
+            <a href="leaderboard.html" class="nav-link">Leaderboard</a>
+            <a href="login.html" class="nav-link">Login</a>
+            <a href="signup.html" class="btn btn-primary btn-sm">Sign Up</a>
+        </div>
+    </nav>
+
+    <div class="container" style="padding-top: calc(var(--header-height) + 4rem); position: relative; z-index: 2;">
+        <div class="glass-card">
+            <h1 class="text-gradient" id="eventsTitleHeader" style="margin-bottom: 1rem;">Athletic Events</h1>
+            <p style="color: var(--text-muted); max-width: 600px;">
+                Join the most challenging and rewarding athletic events. Compete, connect, and conquer.
+            </p>
+
+            <div class="event-grid" id="eventsContainer">
+                <!-- Data will be loaded here -->
+                <div style="grid-column: 1/-1; text-align: center; padding: 3rem; color: var(--text-muted);">
+                    Loading upcoming events...
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" crossorigin></script>
+    <script src="js/supabase.js"></script>
+    <script src="js/script.js?v=1.6"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            const eventsContainer = document.getElementById('eventsContainer');
+            const supabase = window.supabaseClient;
+
+            async function loadUserRegistrations() {
+                const { data: { user } } = await supabase.auth.getUser();
+                if (!user) return [];
+
+                const { data, error } = await supabase
+                    .from('event_registrations')
+                    .select('event_id')
+                    .eq('user_email', user.email);
+
+                return error ? [] : data.map(r => r.event_id);
+            }
+
+            async function loadDynamicEvents() {
+                try {
+                    // 1. Fetch ALL events (past and upcoming)
+                    const { data: events, error } = await supabase
+                        .from('events')
+                        .select('*')
+                        .eq('is_active', true)
+                        .order('start_date', { ascending: false }); // Show newest first
+
+                    if (error) throw error;
+
+                    // 2. Fetch all registration counts
+                    const { data: regCounts, error: regError } = await supabase
+                        .from('event_registrations')
+                        .select('event_id');
+
+                    // Count registrations per event
+                    const registrationMap = {};
+                    if (regCounts) {
+                        regCounts.forEach(reg => {
+                            registrationMap[reg.event_id] = (registrationMap[reg.event_id] || 0) + 1;
+                        });
+                    }
+
+                    // 3. Get user's registered events
+                    const userRegistrations = await loadUserRegistrations();
+
+                    if (events.length === 0) {
+                        eventsContainer.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 3rem; color: var(--text-muted);">No events at the moment. Check back soon!</div>';
+                        return;
+                    }
+
+                    // Separate past and upcoming events
+                    const now = new Date();
+                    const upcomingEvents = [];
+                    const pastEvents = [];
+
+                    events.forEach(event => {
+                        const endDate = event.end_date ? new Date(event.end_date) : new Date(event.start_date);
+                        if (endDate < now) {
+                            pastEvents.push(event);
+                        } else {
+                            upcomingEvents.push(event);
+                        }
+                    });
+
+                    let html = '';
+
+                    // Show upcoming events first
+                    if (upcomingEvents.length > 0) {
+                        html += '<div style="grid-column: 1/-1;"><h2 style="color: var(--primary); margin-bottom: 1rem;">Upcoming Events</h2></div>';
+                        html += upcomingEvents.map(event => renderEventCard(event, userRegistrations, registrationMap, false)).join('');
+                    }
+
+                    // Show past events
+                    if (pastEvents.length > 0) {
+                        html += '<div style="grid-column: 1/-1; margin-top: 2rem;"><h2 style="color: var(--text-muted); margin-bottom: 1rem;">Past Events</h2></div>';
+                        html += pastEvents.map(event => renderEventCard(event, userRegistrations, registrationMap, true)).join('');
+                    }
+
+                    eventsContainer.innerHTML = html;
+
+                } catch (err) {
+                    console.error('Error loading events:', err);
+                    eventsContainer.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 3rem; color: #ef4444;">Failed to load events. Please refresh.</div>';
+                }
+            }
+
+            function renderEventCard(event, userRegistrations, registrationMap, isPast) {
+                const isRegistered = userRegistrations.includes(event.id);
+                const regCount = registrationMap[event.id] || 0;
+                const isSoldOut = regCount >= event.max_participants;
+
+                let buttonHtml = '';
+                if (isPast) {
+                    // Past events show "Closed" button
+                    buttonHtml = `<button class="btn btn-secondary" style="margin-top: 1.5rem; width: 100%; opacity: 0.6;" disabled>Event Closed</button>`;
+                } else if (isRegistered) {
+                    // Already registered
+                    buttonHtml = `<button class="btn btn-outline" style="margin-top: 1.5rem; width: 100%;" disabled>Already Registered</button>`;
+                } else if (isSoldOut) {
+                    // Sold out
+                    buttonHtml = `<button class="btn btn-secondary" style="margin-top: 1.5rem; width: 100%; opacity: 0.6;" disabled>Sold Out</button>`;
+                } else {
+                    // Available for registration
+                    buttonHtml = `<a href="register_event.html?id=${event.id}" class="btn btn-primary" style="margin-top: 1.5rem; text-align: center; text-decoration: none; display: block;">Register Now</a>`;
+                }
+
+                const startDate = new Date(event.start_date);
+                const endDate = event.end_date ? new Date(event.end_date) : null;
+
+                let dateStr = startDate.toLocaleDateString('en-US', {
+                    month: 'short', day: '2-digit', year: 'numeric'
+                });
+
+                if (endDate) {
+                    const endDateStr = endDate.toLocaleDateString('en-US', {
+                        month: 'short', day: '2-digit', year: 'numeric'
+                    });
+                    dateStr += ` - ${endDateStr}`;
+                }
+
+                return `
+                    <div class="glass-card event-card" style="${isPast ? 'opacity: 0.7;' : ''}">
+                        <div class="event-image" style="background: ${event.image_url ? `url(${event.image_url}) center/cover` : 'linear-gradient(45deg, var(--primary), var(--secondary))'}; ${isPast ? 'filter: grayscale(0.5);' : ''}"></div>
+                        <div class="event-date">${dateStr}${isPast ? ' • ENDED' : ''}</div>
+                        <h3 style="margin: 0.5rem 0;">${event.name}</h3>
+                        <p style="color: var(--text-muted); flex-grow: 1;">
+                            ${event.description}
+                        </p>
+                        <div style="margin-top: 1rem; font-weight: 600; color: var(--primary);">₹${event.price}</div>
+                        <div style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0.5rem;">${regCount} / ${event.max_participants} registered</div>
+                        ${buttonHtml}
+                    </div>
+                `;
+            }
+
+            loadDynamicEvents();
+        });
+    </script>
+</body>
+
+</html>
