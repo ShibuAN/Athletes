@@ -66,7 +66,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 strava_token_expires_at: tokenData.expires_at
             };
 
-            await StravaAPI.syncActivities(userEmail, profile);
+            await StravaAPI.autoSyncUserActivities(userEmail, profile);
 
             // Success redirect
             setTimeout(() => {

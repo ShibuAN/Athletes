@@ -7,6 +7,34 @@ const StravaAPI = {
     CACHE_TTL: 5 * 60 * 1000, // 5 minutes cache TTL
     CACHE_KEY_PREFIX: 'strava_cache_',
 
+    // Helper: Get start of day (00:00:00) UTC for a date string
+    getStartOfDayUTC(dateTimeStr) {
+        if (!dateTimeStr) return null;
+        let date;
+        if (dateTimeStr.includes('T')) {
+            date = new Date(dateTimeStr);
+        } else {
+            const p = dateTimeStr.split(/[-/]/);
+            date = new Date(p[0], p[1] - 1, p[2], 0, 0, 0, 0);
+        }
+        date.setHours(0, 0, 0, 0);
+        return isNaN(date.getTime()) ? null : date;
+    },
+
+    // Helper: Get end of day (23:59:59) UTC for a date string
+    getEndOfDayUTC(dateTimeStr) {
+        if (!dateTimeStr) return new Date();
+        let date;
+        if (dateTimeStr.includes('T')) {
+            date = new Date(dateTimeStr);
+        } else {
+            const p = dateTimeStr.split(/[-/]/);
+            date = new Date(p[0], p[1] - 1, p[2], 23, 59, 59, 999);
+        }
+        date.setHours(23, 59, 59, 999);
+        return isNaN(date.getTime()) ? null : date;
+    },
+
     /**
      * Generate the Strava OAuth authorization URL
      */
@@ -300,9 +328,10 @@ const StravaAPI = {
             forceRefresh: false
         });
 
-        // Sort by date descending and limit
+        // Sort by local date descending and limit
+        // a.start_date and b.start_date are start_date_local strings (YYYY-MM-DD...)
         return activities
-            .sort((a, b) => new Date(b.start_date) - new Date(a.start_date))
+            .sort((a, b) => b.start_date.localeCompare(a.start_date))
             .slice(0, limit);
     },
 
@@ -310,8 +339,14 @@ const StravaAPI = {
      * Get activities within a date range (for leaderboard)
      */
     async getActivitiesInRange(userEmail, profile, startDate, endDate) {
-        const afterTs = Math.floor(new Date(startDate).getTime() / 1000);
-        const beforeTs = Math.floor(new Date(endDate).getTime() / 1000);
+        const startObj = this.getStartOfDayUTC(startDate);
+        const endObj = this.getEndOfDayUTC(endDate);
+
+        if (!startObj) return [];
+
+        // Exact UTC timestamps
+        const afterTs = Math.floor(startObj.getTime() / 1000);
+        const beforeTs = Math.floor(endObj.getTime() / 1000);
 
         const activities = await this.fetchActivitiesOnDemand(userEmail, profile, {
             after: afterTs,
@@ -319,10 +354,13 @@ const StravaAPI = {
             forceRefresh: false
         });
 
-        // Filter to exact date range
+        // Filter to exact UTC range
+        const startTs = startObj.getTime();
+        const endTs = endObj.getTime();
+
         return activities.filter(act => {
-            const actDate = new Date(act.start_date);
-            return actDate >= new Date(startDate) && actDate <= new Date(endDate);
+            const actTs = new Date(act.start_date).getTime();
+            return actTs >= startTs && actTs <= endTs;
         });
     },
 
@@ -331,13 +369,265 @@ const StravaAPI = {
      */
     async getThisMonthCount(userEmail, profile) {
         const now = new Date();
-        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+        const year = now.getFullYear();
+        const month = now.getMonth();
+
+        // Start of month in Local (to get the right day/month)
+        const startOfMonthStr = `${year}-${String(month + 1).padStart(2, '0')}-01`;
+
+        // But we fetch from Strava using UTC with a buffer
+        const startOfMonthUTC = this.getStartOfDayUTC(startOfMonthStr);
+        if (!startOfMonthUTC) return 0;
+
+        const afterTs = Math.floor(startOfMonthUTC.getTime() / 1000) - 86400; // 24h buffer
 
         const activities = await this.fetchActivitiesOnDemand(userEmail, profile, {
-            after: Math.floor(startOfMonth.getTime() / 1000)
+            after: afterTs
         });
 
-        return activities.filter(a => new Date(a.start_date) >= startOfMonth).length;
+        // Filter using Local Date string
+        return activities.filter(a => {
+            const actDateStr = a.start_date.substring(0, 10);
+            return actDateStr >= startOfMonthStr;
+        }).length;
+    },
+
+    // ==========================================
+    // EVENT-SPECIFIC TABLE SYNC METHODS
+    // ==========================================
+
+    /**
+     * Get user's active event registrations with event details
+     */
+    async getUserActiveEventRegistrations(userEmail) {
+        const supabase = window.supabaseClient;
+
+        try {
+            // Get registrations for active events where user has paid
+            const { data: registrations, error } = await supabase
+                .from('event_registrations')
+                .select(`
+                    event_id,
+                    events (
+                        id,
+                        name,
+                        start_date,
+                        end_date,
+                        is_active,
+                        activity_table_name,
+                        activity_table_created
+                    )
+                `)
+                .eq('user_email', userEmail)
+                .eq('payment_status', 'paid');
+
+            if (error) {
+                console.error('Error fetching registrations:', error);
+                return [];
+            }
+
+            // Filter to active events that have started
+            const activeEvents = registrations
+                .filter(r => r.events && r.events.is_active)
+                .filter(r => new Date(r.events.start_date) <= new Date())
+                .filter(r => !r.events.end_date || new Date(r.events.end_date) >= new Date())
+                .map(r => r.events);
+
+            console.log('User active events:', activeEvents);
+            return activeEvents;
+        } catch (error) {
+            console.error('Error getting user events:', error);
+            return [];
+        }
+    },
+
+    /**
+     * Ensure event activity table exists (create if event has started)
+     */
+    async ensureEventTableExists(eventId) {
+        const supabase = window.supabaseClient;
+
+        try {
+            // Call the database function to create table if needed
+            const { data, error } = await supabase.rpc('create_event_activity_table', {
+                event_id: eventId
+            });
+
+            if (error) {
+                console.error('Error creating event table:', error);
+                return null;
+            }
+
+            console.log('Event table ensured:', data);
+            return data; // Returns table name
+        } catch (error) {
+            console.error('Error ensuring event table:', error);
+            return null;
+        }
+    },
+
+    /**
+     * Sync activities to event-specific table
+     */
+    async syncActivitiesToEventTable(userEmail, profile, event) {
+        const supabase = window.supabaseClient;
+
+        try {
+            // Ensure table exists
+            let tableName = event.activity_table_name;
+            if (!tableName || !event.activity_table_created) {
+                tableName = await this.ensureEventTableExists(event.id);
+                if (!tableName) {
+                    throw new Error('Could not create event activity table');
+                }
+            }
+
+            console.log(`Syncing activities to table: ${tableName}`);
+
+            // Get event date range
+            const eventStartDate = event.start_date.substring(0, 10);
+            const eventEndDate = event.end_date ? event.end_date.substring(0, 10) : new Date().toISOString().substring(0, 10);
+
+            // Fetch activities from Strava for event period (with precise UTC conversion)
+            const startObj = this.getStartOfDayUTC(event.start_date);
+            const endObj = this.getEndOfDayUTC(event.end_date || new Date().toISOString());
+
+            const afterTs = Math.floor(startObj.getTime() / 1000);
+            const beforeTs = Math.floor(endObj.getTime() / 1000);
+
+            const accessToken = await this.getValidAccessToken(profile);
+            const rawActivities = await this.fetchActivities(accessToken, 200, {
+                after: afterTs,
+                before: beforeTs
+            });
+
+            if (!rawActivities || rawActivities.length === 0) {
+                console.log('No activities found for event period');
+                return { synced: 0, skipped: 0 };
+            }
+
+            // Transform and filter activities
+            const startTs = startObj.getTime();
+            const endTs = endObj.getTime();
+
+            const activities = rawActivities
+                .filter(act => {
+                    // Compare using UTC timestamp
+                    const actTs = new Date(act.start_date).getTime();
+                    return actTs >= startTs && actTs <= endTs;
+                })
+                .map(act => ({
+                    user_email: userEmail,
+                    strava_id: act.id,
+                    activity_name: act.name,
+                    activity_type: this.normalizeActivityType(act.type),
+                    activity_date: act.start_date_local.substring(0, 10), // YYYY-MM-DD
+                    distance: act.distance || 0,
+                    elevation: act.total_elevation_gain || 0,
+                    moving_time: act.moving_time || 0
+                }));
+
+            console.log(`Found ${activities.length} activities to sync`);
+
+            // Upsert activities to event table (using raw SQL via RPC or direct insert)
+            let synced = 0;
+            let skipped = 0;
+
+            for (const activity of activities) {
+                // Try to insert, on conflict update
+                const { error } = await supabase
+                    .from(tableName)
+                    .upsert(activity, {
+                        onConflict: 'strava_id',
+                        ignoreDuplicates: false
+                    });
+
+                if (error) {
+                    console.warn(`Failed to sync activity ${activity.strava_id}:`, error.message);
+                    skipped++;
+                } else {
+                    synced++;
+                }
+            }
+
+            console.log(`Sync complete: ${synced} synced, ${skipped} skipped`);
+            return { synced, skipped, tableName };
+        } catch (error) {
+            console.error('Error syncing to event table:', error);
+            throw error;
+        }
+    },
+
+    /**
+     * Auto-sync activities for all user's active events
+     * Call this when user visits dashboard
+     */
+    async autoSyncUserActivities(userEmail, profile) {
+        try {
+            console.log('Starting auto-sync for user:', userEmail);
+
+            // Get user's active event registrations
+            const activeEvents = await this.getUserActiveEventRegistrations(userEmail);
+
+            if (activeEvents.length === 0) {
+                console.log('No active events to sync');
+                return { events: 0, totalSynced: 0 };
+            }
+
+            const results = [];
+
+            for (const event of activeEvents) {
+                try {
+                    const result = await this.syncActivitiesToEventTable(userEmail, profile, event);
+                    results.push({
+                        eventName: event.name,
+                        ...result
+                    });
+                } catch (err) {
+                    console.error(`Failed to sync for event ${event.name}:`, err);
+                    results.push({
+                        eventName: event.name,
+                        error: err.message
+                    });
+                }
+            }
+
+            const totalSynced = results.reduce((sum, r) => sum + (r.synced || 0), 0);
+            console.log('Auto-sync complete:', results);
+
+            return {
+                events: activeEvents.length,
+                totalSynced,
+                details: results
+            };
+        } catch (error) {
+            console.error('Auto-sync error:', error);
+            throw error;
+        }
+    },
+
+    /**
+     * Get activities from event table (for leaderboard)
+     */
+    async getActivitiesFromEventTable(tableName) {
+        const supabase = window.supabaseClient;
+
+        try {
+            const { data, error } = await supabase
+                .from(tableName)
+                .select('*')
+                .order('activity_date', { ascending: false });
+
+            if (error) {
+                console.error('Error fetching from event table:', error);
+                return [];
+            }
+
+            return data || [];
+        } catch (error) {
+            console.error('Error getting activities from event table:', error);
+            return [];
+        }
     }
 };
 

@@ -294,6 +294,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                     // Load activities on-demand
                     await loadStravaActivities(email, profile, false);
 
+                    // Auto-sync activities to event tables (background)
+                    autoSyncToEventTables(email, profile);
+
                 } else {
                     stravaStatusEl.innerHTML = '<span style="color: var(--text-muted);">Not Connected</span>';
                     if (toggleBtn) {
@@ -778,14 +781,67 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
-    // --- 5. Reset Password (Update) Logic ---
+    // --- 5. Auto-Sync to Event Tables (Background) ---
+    async function autoSyncToEventTables(email, profile) {
+        try {
+            console.log('Starting background auto-sync to event tables...');
+            const result = await StravaAPI.autoSyncUserActivities(email, profile);
+
+            if (result.totalSynced > 0) {
+                console.log(`Auto-sync complete: ${result.totalSynced} activities synced to ${result.events} event(s)`);
+
+                // Show subtle notification
+                const notification = document.createElement('div');
+                notification.style.cssText = 'position: fixed; bottom: 20px; right: 20px; background: rgba(34, 197, 94, 0.9); color: white; padding: 1rem 1.5rem; border-radius: 8px; font-size: 0.9rem; z-index: 9999; animation: fadeIn 0.3s ease;';
+                notification.innerHTML = `<i class="fa-solid fa-check-circle"></i> Synced ${result.totalSynced} activities to leaderboard`;
+                document.body.appendChild(notification);
+
+                setTimeout(() => {
+                    notification.style.opacity = '0';
+                    notification.style.transition = 'opacity 0.3s ease';
+                    setTimeout(() => notification.remove(), 300);
+                }, 3000);
+            } else {
+                console.log('Auto-sync: No new activities to sync');
+            }
+        } catch (err) {
+            console.error('Auto-sync failed:', err);
+            // Silent fail - don't disturb user
+        }
+    }
+
+    // --- 6. Reset Password (Update) Logic ---
     if (pageId === 'reset_password') {
         const updateForm = document.getElementById('updatePasswordForm');
         const messageEl = document.getElementById('resetMessage');
 
+        // 1. Check for error parameters in hash (e.g. link expired)
+        const hashParams = new URLSearchParams(window.location.hash.substring(1));
+        const errorCode = hashParams.get('error_code');
+        const errorDesc = hashParams.get('error_description');
+
+        if (errorCode) {
+            console.error('Password reset link error:', errorCode, errorDesc);
+            if (messageEl) {
+                messageEl.textContent = 'Reset link invalid or expired. Please request a new one.';
+                messageEl.style.color = '#ef4444';
+            }
+            if (updateForm) updateForm.style.display = 'none';
+            alert('Error: ' + (errorDesc?.replaceAll('+', ' ') || 'The reset link has expired.'));
+            return;
+        }
+
         if (updateForm) {
             updateForm.onsubmit = async (e) => {
                 e.preventDefault();
+
+                // Ensure we have a session before updating
+                const { data: { session } } = await supabase.auth.getSession();
+                if (!session) {
+                    alert('Error: Auth session missing! The link might have expired or you are not authorized. Please request a new reset link.');
+                    return;
+                }
+
                 const newPassword = document.getElementById('newPassword').value;
                 const confirmPassword = document.getElementById('confirmPassword').value;
                 const submitBtn = updateForm.querySelector('button[type="submit"]');

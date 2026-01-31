@@ -6,6 +6,33 @@ ADD COLUMN IF NOT EXISTS strava_token_expires_at BIGINT,
 ADD COLUMN IF NOT EXISTS strava_athlete_id TEXT,
 ADD COLUMN IF NOT EXISTS role TEXT DEFAULT 'user';
 
+-- CLEANUP: Drop the insecure view if it exists (Fixes Supabase security warning)
+DROP VIEW IF EXISTS leaderboard_profiles;
+
+-- Secure RPC function for the leaderboard (Only expose non-sensitive fields)
+-- This replaces the view to avoid Supabase security warnings
+CREATE OR REPLACE FUNCTION get_leaderboard_profiles(user_emails TEXT[])
+RETURNS TABLE (
+    email TEXT,
+    first_name TEXT,
+    last_name TEXT,
+    strava_connected BOOLEAN
+) 
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+    RETURN QUERY
+    SELECT p.email, p.first_name, p.last_name, p.strava_connected
+    FROM profiles p
+    WHERE p.email = ANY(user_emails);
+END;
+$$;
+
+-- Grant access to the function
+GRANT EXECUTE ON FUNCTION get_leaderboard_profiles(TEXT[]) TO authenticated;
+
 -- Helper function to check admin status safely (prevents recursion)
 CREATE OR REPLACE FUNCTION is_admin()
 RETURNS BOOLEAN AS $$
@@ -99,6 +126,9 @@ CREATE TABLE IF NOT EXISTS event_registrations (
 
 ALTER TABLE event_registrations ADD COLUMN IF NOT EXISTS user_email TEXT;
 ALTER TABLE event_registrations ADD COLUMN IF NOT EXISTS payment_status TEXT DEFAULT 'pending';
+ALTER TABLE event_registrations ADD COLUMN IF NOT EXISTS razorpay_order_id TEXT;
+ALTER TABLE event_registrations ADD COLUMN IF NOT EXISTS razorpay_payment_id TEXT;
+ALTER TABLE event_registrations ADD COLUMN IF NOT EXISTS razorpay_signature TEXT;
 
 -- Force FK constraint if not exists (Important for joins)
 DO $$
@@ -167,9 +197,10 @@ USING (is_admin());
 
 -- REGISTRATIONS Policies
 DROP POLICY IF EXISTS "Users can view their own registrations" ON event_registrations;
-CREATE POLICY "Users can view their own registrations"
+DROP POLICY IF EXISTS "Allow all authenticated users to view registrations" ON event_registrations;
+CREATE POLICY "Allow all authenticated users to view registrations"
 ON event_registrations FOR SELECT
-USING (user_email = auth.jwt() ->> 'email' OR is_admin());
+USING (auth.role() = 'authenticated');
 
 DROP POLICY IF EXISTS "Users can register for events" ON event_registrations;
 CREATE POLICY "Users can register for events"
@@ -185,6 +216,180 @@ USING (is_admin());
 UPDATE profiles
 SET role = 'admin'
 WHERE email = 'shibukumarbe@gmail.com';
+
+-- ============================================
+-- 12. EVENT-SPECIFIC ACTIVITY TABLES SYSTEM
+-- ============================================
+
+-- Add column to track if activity table was created for event
+ALTER TABLE events ADD COLUMN IF NOT EXISTS activity_table_name TEXT;
+ALTER TABLE events ADD COLUMN IF NOT EXISTS activity_table_created BOOLEAN DEFAULT false;
+
+-- Function to sanitize event name for table name
+CREATE OR REPLACE FUNCTION sanitize_table_name(event_name TEXT)
+RETURNS TEXT AS $$
+DECLARE
+    sanitized TEXT;
+BEGIN
+    -- Convert to lowercase, replace spaces and special chars with underscore
+    sanitized := lower(event_name);
+    sanitized := regexp_replace(sanitized, '[^a-z0-9]', '_', 'g');
+    sanitized := regexp_replace(sanitized, '_+', '_', 'g');  -- Remove multiple underscores
+    sanitized := trim(both '_' from sanitized);  -- Remove leading/trailing underscores
+    sanitized := 'event_activities_' || sanitized;
+
+    -- Truncate if too long (max 63 chars for PostgreSQL)
+    IF length(sanitized) > 63 THEN
+        sanitized := left(sanitized, 63);
+    END IF;
+
+    RETURN sanitized;
+END;
+$$ LANGUAGE plpgsql SECURITY INVOKER SET search_path = public;
+
+-- Function to create event-specific activity table
+CREATE OR REPLACE FUNCTION create_event_activity_table(event_id UUID)
+RETURNS TEXT AS $$
+DECLARE
+    event_record RECORD;
+    v_table_name TEXT;
+    create_sql TEXT;
+BEGIN
+    -- Get event details
+    SELECT * INTO event_record FROM events WHERE id = event_id;
+
+    IF event_record IS NULL THEN
+        RAISE EXCEPTION 'Event not found: %', event_id;
+    END IF;
+
+    -- Check if table already created
+    IF event_record.activity_table_created = true THEN
+        RETURN event_record.activity_table_name;
+    END IF;
+
+    -- Generate table name
+    v_table_name := sanitize_table_name(event_record.name);
+
+    -- Check if table already exists
+    IF EXISTS (SELECT 1 FROM information_schema.tables t WHERE t.table_name = v_table_name AND t.table_schema = 'public') THEN
+        -- Update event record
+        UPDATE events SET activity_table_name = v_table_name, activity_table_created = true WHERE id = event_id;
+        RETURN v_table_name;
+    END IF;
+
+    -- Create the table (using gen_random_uuid() which is built-in)
+    create_sql := format('
+        CREATE TABLE %I (
+            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+            user_email TEXT NOT NULL,
+            strava_id BIGINT UNIQUE NOT NULL,
+            activity_name TEXT,
+            activity_type TEXT,
+            activity_date DATE NOT NULL,
+            distance NUMERIC DEFAULT 0,
+            elevation NUMERIC DEFAULT 0,
+            moving_time INTEGER DEFAULT 0,
+            created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+            CONSTRAINT %I FOREIGN KEY (user_email) REFERENCES profiles(email) ON DELETE CASCADE
+        )', v_table_name, v_table_name || '_user_email_fkey');
+
+    EXECUTE create_sql;
+
+    -- Create indexes
+    EXECUTE format('CREATE INDEX %I ON %I(user_email)', v_table_name || '_user_idx', v_table_name);
+    EXECUTE format('CREATE INDEX %I ON %I(activity_date)', v_table_name || '_date_idx', v_table_name);
+    EXECUTE format('CREATE INDEX %I ON %I(activity_type)', v_table_name || '_type_idx', v_table_name);
+
+    -- Enable RLS
+    EXECUTE format('ALTER TABLE %I ENABLE ROW LEVEL SECURITY', v_table_name);
+
+    -- Create RLS policies
+    -- SELECT: All authenticated users can read (for leaderboard)
+    EXECUTE format('
+        CREATE POLICY "Anyone can view activities" ON %I
+        FOR SELECT USING (auth.role() = ''authenticated'')', v_table_name);
+
+    -- INSERT: Users can only insert their own activities
+    EXECUTE format('
+        CREATE POLICY "Users can insert own activities" ON %I
+        FOR INSERT WITH CHECK (user_email = auth.jwt() ->> ''email'')', v_table_name);
+
+    -- UPDATE: Users can only update their own activities
+    EXECUTE format('
+        CREATE POLICY "Users can update own activities" ON %I
+        FOR UPDATE USING (user_email = auth.jwt() ->> ''email'' OR is_admin())', v_table_name);
+
+    -- DELETE: Users can delete their own, admins can delete any
+    EXECUTE format('
+        CREATE POLICY "Users can delete own activities" ON %I
+        FOR DELETE USING (user_email = auth.jwt() ->> ''email'' OR is_admin())', v_table_name);
+
+    -- Update event record
+    UPDATE events SET activity_table_name = v_table_name, activity_table_created = true WHERE id = event_id;
+
+    RETURN v_table_name;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
+
+-- Function to delete event activity table (admin only)
+CREATE OR REPLACE FUNCTION delete_event_activity_table(event_id UUID)
+RETURNS BOOLEAN AS $$
+DECLARE
+    event_record RECORD;
+BEGIN
+    -- Get event details
+    SELECT * INTO event_record FROM events WHERE id = event_id;
+
+    IF event_record IS NULL THEN
+        RAISE EXCEPTION 'Event not found: %', event_id;
+    END IF;
+
+    IF event_record.activity_table_name IS NULL THEN
+        RETURN false;
+    END IF;
+
+    -- Drop the table
+    EXECUTE format('DROP TABLE IF EXISTS %I CASCADE', event_record.activity_table_name);
+
+    -- Update event record
+    UPDATE events SET activity_table_name = NULL, activity_table_created = false WHERE id = event_id;
+
+    RETURN true;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
+
+-- Function to check if event has started and create table
+CREATE OR REPLACE FUNCTION check_and_create_event_tables()
+RETURNS INTEGER AS $$
+DECLARE
+    event_record RECORD;
+    tables_created INTEGER := 0;
+BEGIN
+    -- Find events that have started but don't have activity tables yet
+    FOR event_record IN
+        SELECT * FROM events
+        WHERE is_active = true
+        AND start_date <= NOW()
+        AND (activity_table_created = false OR activity_table_created IS NULL)
+    LOOP
+        PERFORM create_event_activity_table(event_record.id);
+        tables_created := tables_created + 1;
+    END LOOP;
+
+    RETURN tables_created;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
+
+-- Function to get event activity table name (for use in JS)
+CREATE OR REPLACE FUNCTION get_event_table_name(event_id UUID)
+RETURNS TEXT AS $$
+DECLARE
+    v_table_name TEXT;
+BEGIN
+    SELECT activity_table_name INTO v_table_name FROM events WHERE id = event_id;
+    RETURN v_table_name;
+END;
+$$ LANGUAGE plpgsql SECURITY INVOKER SET search_path = public;
 
 -- Verification output
 SELECT is_admin() as am_i_admin;

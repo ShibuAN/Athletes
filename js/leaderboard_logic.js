@@ -11,9 +11,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     let eventsCache = {};
 
     async function initLeaderboard() {
-        console.log('Initializing Leaderboard Logic (On-Demand Strava API)...');
+        console.log('Initializing Leaderboard Logic (Event Table Based)...');
 
-        // Fetch Events
+        // Fetch Events that have started (activity tables should exist)
         const { data: events, error } = await supabase
             .from('events')
             .select('*')
@@ -45,21 +45,40 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         if (!eventId) return;
 
-        leaderboardBody.innerHTML = '<tr><td colspan="3" style="text-align: center; padding: 2rem;"><i class="fa-solid fa-spinner fa-spin"></i> Fetching live data from Strava...</td></tr>';
+        leaderboardBody.innerHTML = '<tr><td colspan="3" style="text-align: center; padding: 2rem;"><i class="fa-solid fa-spinner fa-spin"></i> Loading leaderboard...</td></tr>';
 
         try {
             const event = eventsCache[eventId];
-            // Extract just the date part (YYYY-MM-DD) and set to start of day / end of day
-            const startDateStr = (event.start_date || "").substring(0, 10);
-            const endDateStr = event.end_date ? event.end_date.substring(0, 10) : null;
 
-            // Create dates at midnight local time to include full days
-            const startDate = new Date(startDateStr + 'T00:00:00');
-            let endDate = endDateStr ? new Date(endDateStr + 'T23:59:59') : new Date(new Date().setFullYear(new Date().getFullYear() + 10));
+            // Check if event has activity table
+            if (!event.activity_table_name || !event.activity_table_created) {
+                // Try to create table if event has started
+                const eventStartDate = new Date(event.start_date);
+                if (eventStartDate <= new Date()) {
+                    console.log('Event started but no table, attempting to create...');
+                    try {
+                        const { data: tableName, error: createError } = await supabase.rpc('create_event_activity_table', {
+                            event_id: eventId
+                        });
+                        if (!createError && tableName) {
+                            event.activity_table_name = tableName;
+                            event.activity_table_created = true;
+                            eventsCache[eventId] = event;
+                        }
+                    } catch (err) {
+                        console.error('Failed to create event table:', err);
+                    }
+                }
 
-            console.log(`Fetching leaderboard for event: ${event.name} (${startDate.toISOString()} to ${endDate.toISOString()})`);
+                if (!event.activity_table_name) {
+                    leaderboardBody.innerHTML = '<tr><td colspan="3" style="text-align: center; padding: 2rem;">Event has not started yet. Leaderboard will be available once the event begins.</td></tr>';
+                    return;
+                }
+            }
 
-            // Fetch Paid Registrations
+            console.log(`Loading leaderboard from table: ${event.activity_table_name}`);
+
+            // Fetch Paid Registrations to get list of participants
             const { data: registrations, error: regError } = await supabase
                 .from('event_registrations')
                 .select('user_email')
@@ -77,39 +96,38 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             const userEmails = [...new Set(registrations.map(r => r.user_email))];
 
-            // Fetch Profiles with Strava tokens
+            // Fetch Profiles for display names using secure RPC function
             const { data: profiles, error: profileError } = await supabase
-                .from('profiles')
-                .select('email, first_name, last_name, strava_connected, strava_access_token, strava_refresh_token, strava_token_expires_at')
-                .in('email', userEmails);
+                .rpc('get_leaderboard_profiles', {
+                    user_emails: userEmails
+                });
 
             if (profileError) {
                 console.error('Error fetching profiles:', profileError);
             }
 
             const profileMap = {};
-            const activeUserEmails = [];
-
             if (profiles) {
                 profiles.forEach(p => {
                     profileMap[p.email] = p;
-                    if (p.strava_connected && p.strava_access_token) {
-                        activeUserEmails.push(p.email);
-                    }
                 });
             }
 
-            console.log('Total Registered Users:', userEmails.length);
-            console.log('Connected Strava Users:', activeUserEmails.length);
+            // Fetch ALL activities from event table
+            const { data: activities, error: actError } = await supabase
+                .from(event.activity_table_name)
+                .select('*');
 
-            if (activeUserEmails.length === 0) {
-                leaderboardBody.innerHTML = '<tr><td colspan="3" style="text-align: center; padding: 2rem;">No participants have connected their Strava account yet.</td></tr>';
-                return;
+            if (actError) {
+                console.error('Error fetching activities:', actError);
+                throw new Error('Failed to load activities: ' + actError.message);
             }
 
-            // Initialize user map
+            console.log(`Loaded ${activities ? activities.length : 0} activities from event table`);
+
+            // Initialize user map for all registered users
             const userMap = {};
-            activeUserEmails.forEach(email => {
+            userEmails.forEach(email => {
                 const profile = profileMap[email];
                 let displayName = email.split('@')[0];
 
@@ -128,47 +146,24 @@ document.addEventListener('DOMContentLoaded', async () => {
                     totalActivities: 0,
                     eligibleDistance: 0,
                     totalDistance: 0,
-                    fetchError: false
+                    stravaConnected: profile ? profile.strava_connected : false
                 };
             });
 
-            // Fetch activities from Strava API for each user (ON-DEMAND)
-            console.log(`Fetching activities from Strava API for ${activeUserEmails.length} users...`);
-
-            // Fetch in parallel (with rate limit consideration)
-            const fetchPromises = activeUserEmails.map(async (email) => {
-                const profile = profileMap[email];
-                try {
-                    const activities = await StravaAPI.getActivitiesInRange(email, profile, startDate, endDate);
-                    return { email, activities, error: null };
-                } catch (err) {
-                    console.error(`Failed to fetch for ${email}:`, err.message);
-                    return { email, activities: [], error: err.message };
-                }
-            });
-
-            const results = await Promise.all(fetchPromises);
-
-            // Process activities
-            results.forEach(({ email, activities, error }) => {
-                const userStats = userMap[email];
-                if (!userStats) return;
-
-                if (error) {
-                    userStats.fetchError = true;
-                    return;
-                }
-
+            // Process activities from event table
+            if (activities && activities.length > 0) {
                 activities.forEach(act => {
-                    const type = act.type ? act.type.toLowerCase() : 'unknown';
-                    const dist = act.distance || 0;
+                    const userStats = userMap[act.user_email];
+                    if (!userStats) return; // Activity from unregistered user
 
-                    // Count ALL activities within event dates (no filter)
+                    const type = act.activity_type ? act.activity_type.toLowerCase() : 'unknown';
+                    const dist = parseFloat(act.distance) || 0;
+
+                    // Count ALL activities
                     userStats.totalActivities++;
                     userStats.totalDistance += dist;
 
-                    // Eligibility Check for supported activity types
-                    // Types are normalized by strava_api.js: Ride->cycling, Hike->hiking, Swim->swimming
+                    // Eligibility Check
                     let isEligible = false;
 
                     if (type === 'walk' || type === 'run' || type === 'hiking') {
@@ -177,37 +172,30 @@ document.addEventListener('DOMContentLoaded', async () => {
                     else if (type === 'cycling') {
                         if (dist >= 10000) isEligible = true;
                     }
-                    else if (type === 'swimming') {
-                        if (dist >= 500) isEligible = true;
-                    }
-                    // Swimming (Strava returns 'Swim' not 'swimming')
-                    else if (type === 'swim' || type === 'swimming') {
+                    else if (type === 'swimming' || type === 'swim') {
                         if (dist >= 500) isEligible = true;
                     }
 
-                    // Types are already normalized by strava_api.js (Ride->cycling, Hike->hiking, Swim->swimming)
+                    // Activity type filter
                     const matchesFilter = (activityFilter === 'all' || type === activityFilter.toLowerCase());
 
-                    // Count eligible activities (filtered by dropdown if selected)
+                    // Count eligible activities
                     if (matchesFilter && isEligible) {
-                        // start_date already contains local date from strava_api.js transformation
-                        const dateStr = act.start_date || "";
-                        const activityDate = dateStr.substring(0, 10); // YYYY-MM-DD
+                        const activityDate = act.activity_date;
                         if (activityDate) {
                             userStats.totalDays.add(activityDate);
-                            console.log(`[${userStats.name}] Eligible: ${act.name} | Type: ${type} | Dist: ${(dist/1000).toFixed(2)}km | Date: ${activityDate}`);
+                            console.log(`[${userStats.name}] Eligible: ${act.activity_name} | Type: ${type} | Dist: ${(dist / 1000).toFixed(2)}km | Date: ${activityDate}`);
                         }
                         userStats.eligibleActivities++;
                         userStats.eligibleDistance += dist;
                     }
                 });
-            });
+            }
 
-            // Log all unique dates for debugging
+            // Log stats for debugging
             Object.values(userMap).forEach(u => {
                 const sortedDates = Array.from(u.totalDays).sort();
-                console.log(`[${u.name}] Total unique days: ${u.totalDays.size}`);
-                console.log(`[${u.name}] Dates counted:`, sortedDates);
+                console.log(`[${u.name}] Total unique days: ${u.totalDays.size}`, sortedDates);
             });
 
             // Sort (by Days then Eligible Distance)
@@ -220,7 +208,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             const currentUserEmail = localStorage.getItem('user');
 
             if (sortedUsers.length === 0) {
-                leaderboardBody.innerHTML = '<tr><td colspan="3" style="text-align: center; padding: 2rem;">No eligible activities found within the event dates.</td></tr>';
+                leaderboardBody.innerHTML = '<tr><td colspan="3" style="text-align: center; padding: 2rem;">No participants found.</td></tr>';
                 return;
             }
 
@@ -233,7 +221,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                 const medal = rankClass ? `<span class="rank-badge ${rankClass}">${index + 1}</span>` : `<span style="display:inline-block; width:30px; text-align:center; font-weight:bold;">${index + 1}.</span>`;
 
-                const errorIndicator = u.fetchError ? ' <i class="fa-solid fa-exclamation-triangle" style="color: #eab308;" title="Could not fetch latest data"></i>' : '';
+                // Show indicator if user hasn't connected Strava or synced
+                const notSyncedIndicator = (!u.stravaConnected || u.totalActivities === 0)
+                    ? ' <i class="fa-solid fa-clock" style="color: #6b7280;" title="Waiting for activity sync"></i>'
+                    : '';
 
                 return `
                     <tr class="${isUser ? 'current-user' : ''}">
@@ -241,7 +232,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                             <div style="display: flex; align-items: center; gap: 0.75rem;">
                                 ${medal}
                                 <div>
-                                    <div style="font-weight: 600;">${u.name}${errorIndicator}</div>
+                                    <div style="font-weight: 600;">${u.name}${notSyncedIndicator}</div>
                                     ${isUser ? '<span style="font-size:0.7rem; color:var(--primary);">YOU</span>' : ''}
                                 </div>
                             </div>
@@ -258,14 +249,14 @@ document.addEventListener('DOMContentLoaded', async () => {
                 `;
             }).join('');
 
-            // Add live data note
+            // Add note
             const existingNote = document.getElementById('leaderboardNote');
             if (existingNote) existingNote.remove();
 
             const note = document.createElement('div');
             note.id = 'leaderboardNote';
             note.style.cssText = 'text-align: center; padding: 1rem; color: var(--text-muted); font-size: 0.8rem;';
-            note.innerHTML = `<i class="fa-solid fa-bolt" style="color: var(--primary);"></i> Live data from Strava API • Last updated: ${new Date().toLocaleTimeString()}`;
+            note.innerHTML = `<i class="fa-solid fa-database" style="color: var(--primary);"></i> Data synced from participants' Strava accounts • Last loaded: ${new Date().toLocaleTimeString()}`;
             leaderboardBody.closest('table').parentNode.appendChild(note);
 
         } catch (err) {

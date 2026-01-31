@@ -87,6 +87,11 @@
                 <div class="stat-value" id="stravaConnected">-</div>
                 <div class="stat-label">Strava Connected</div>
             </a>
+            <a href="admin_event_activities.html" class="glass-card stat-card animate-float"
+                style="animation-delay: 0.4s; text-decoration: none;">
+                <div class="stat-value" id="eventTables">-</div>
+                <div class="stat-label">Event Activity Tables</div>
+            </a>
         </div>
     </div>
 
@@ -156,6 +161,14 @@
                         .eq('strava_connected', true);
                     const stravaConnectedEl = document.getElementById('stravaConnected');
                     if (stravaConnectedEl) stravaConnectedEl.textContent = stravaCount || 0;
+
+                    // Count event activity tables
+                    const { count: tableCount } = await supabase
+                        .from('events')
+                        .select('*', { count: 'exact', head: true })
+                        .eq('activity_table_created', true);
+                    const eventTablesEl = document.getElementById('eventTables');
+                    if (eventTablesEl) eventTablesEl.textContent = tableCount || 0;
 
                 } catch (err) {
                     console.error('Error loading stats:', err);
