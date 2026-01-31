@@ -536,6 +536,62 @@ document.addEventListener('DOMContentLoaded', async () => {
         };
     }
 
+    // --- Forgot Password Logic ---
+    const forgotLink = document.getElementById('forgotPasswordLink');
+    const resetModal = document.getElementById('resetModal');
+    const closeReset = document.getElementById('closeResetBtn');
+    const sendReset = document.getElementById('sendResetBtn');
+
+    if (forgotLink && resetModal) {
+        console.log('Forgot password components found');
+        forgotLink.addEventListener('click', (e) => {
+            e.preventDefault();
+            console.log('Forgot password link clicked');
+            resetModal.style.display = 'flex';
+        });
+
+        if (closeReset) {
+            closeReset.addEventListener('click', () => {
+                resetModal.style.display = 'none';
+            });
+        }
+
+        if (sendReset) {
+            sendReset.addEventListener('click', async () => {
+                const emailInput = document.getElementById('resetEmail');
+                const email = emailInput ? emailInput.value.trim() : '';
+
+                if (!email) {
+                    alert('Please enter your email.');
+                    return;
+                }
+
+                sendReset.disabled = true;
+                const originalText = sendReset.textContent;
+                sendReset.textContent = 'Sending...';
+
+                try {
+                    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+                        redirectTo: window.location.origin + '/reset_password.html',
+                    });
+
+                    if (error) throw error;
+
+                    alert('Password reset link sent! Please check your email.');
+                    resetModal.style.display = 'none';
+                } catch (err) {
+                    console.error('Reset error:', err);
+                    alert('Error: ' + err.message);
+                } finally {
+                    sendReset.disabled = false;
+                    sendReset.textContent = originalText;
+                }
+            });
+        }
+    } else {
+        if (pageId === 'login') console.warn('Forgot password components NOT found on login page.');
+    }
+
     const signupForm = document.getElementById('signupForm');
     if (signupForm) {
         signupForm.onsubmit = async (e) => {
@@ -720,6 +776,56 @@ document.addEventListener('DOMContentLoaded', async () => {
                     btn.innerHTML = originalText;
                 }
             });
+        }
+    }
+
+    // --- 5. Reset Password (Update) Logic ---
+    if (pageId === 'reset_password') {
+        const updateForm = document.getElementById('updatePasswordForm');
+        const messageEl = document.getElementById('resetMessage');
+
+        if (updateForm) {
+            updateForm.onsubmit = async (e) => {
+                e.preventDefault();
+                const newPassword = document.getElementById('newPassword').value;
+                const confirmPassword = document.getElementById('confirmPassword').value;
+                const submitBtn = updateForm.querySelector('button[type="submit"]');
+
+                if (newPassword !== confirmPassword) {
+                    alert('Passwords do not match!');
+                    return;
+                }
+
+                if (newPassword.length < 6) {
+                    alert('Password must be at least 6 characters.');
+                    return;
+                }
+
+                submitBtn.disabled = true;
+                submitBtn.textContent = 'Updating...';
+
+                try {
+                    const { error } = await supabase.auth.updateUser({ password: newPassword });
+
+                    if (error) throw error;
+
+                    if (messageEl) {
+                        messageEl.textContent = 'Password updated successfully! Redirecting to login...';
+                        messageEl.style.color = '#22c55e';
+                    }
+                    alert('Password updated successfully!');
+
+                    setTimeout(() => {
+                        window.location.href = 'login.html';
+                    }, 2000);
+
+                } catch (err) {
+                    console.error('Update error:', err);
+                    alert('Error: ' + err.message);
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = 'Update Password';
+                }
+            };
         }
     }
 });
