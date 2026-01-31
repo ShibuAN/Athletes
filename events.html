@@ -94,14 +94,21 @@
 
             async function loadUserRegistrations() {
                 const { data: { user } } = await supabase.auth.getUser();
-                if (!user) return [];
+                if (!user) return {};
 
                 const { data, error } = await supabase
                     .from('event_registrations')
-                    .select('event_id')
+                    .select('event_id, payment_status')
                     .eq('user_email', user.email);
 
-                return error ? [] : data.map(r => r.event_id);
+                if (error) return {};
+
+                // Map event_id to payment_status
+                const statusMap = {};
+                data.forEach(reg => {
+                    statusMap[reg.event_id] = reg.payment_status;
+                });
+                return statusMap;
             }
 
             async function loadDynamicEvents() {
@@ -115,10 +122,11 @@
 
                     if (error) throw error;
 
-                    // 2. Fetch all registration counts
+                    // 2. Fetch all PAID registration counts
                     const { data: regCounts, error: regError } = await supabase
                         .from('event_registrations')
-                        .select('event_id');
+                        .select('event_id')
+                        .eq('payment_status', 'paid');
 
                     // Count registrations per event
                     const registrationMap = {};
@@ -128,7 +136,7 @@
                         });
                     }
 
-                    // 3. Get user's registered events
+                    // 3. Get user's registered events with status
                     const userRegistrations = await loadUserRegistrations();
 
                     if (events.length === 0) {
@@ -173,7 +181,9 @@
             }
 
             function renderEventCard(event, userRegistrations, registrationMap, isPast) {
-                const isRegistered = userRegistrations.includes(event.id);
+                const userStatus = userRegistrations[event.id];
+                const isPaid = userStatus === 'paid';
+                const isPending = userStatus === 'pending';
                 const regCount = registrationMap[event.id] || 0;
                 const isSoldOut = regCount >= event.max_participants;
 
@@ -181,14 +191,14 @@
                 if (isPast) {
                     // Past events show "Closed" button
                     buttonHtml = `<button class="btn btn-secondary" style="margin-top: 1.5rem; width: 100%; opacity: 0.6;" disabled>Event Closed</button>`;
-                } else if (isRegistered) {
-                    // Already registered
+                } else if (isPaid) {
+                    // Already registered and paid
                     buttonHtml = `<button class="btn btn-outline" style="margin-top: 1.5rem; width: 100%;" disabled>Already Registered</button>`;
                 } else if (isSoldOut) {
                     // Sold out
                     buttonHtml = `<button class="btn btn-secondary" style="margin-top: 1.5rem; width: 100%; opacity: 0.6;" disabled>Sold Out</button>`;
                 } else {
-                    // Available for registration
+                    // Available for registration (or pending payment)
                     buttonHtml = `<a href="register_event.html?id=${event.id}" class="btn btn-primary" style="margin-top: 1.5rem; text-align: center; text-decoration: none; display: block;">Register Now</a>`;
                 }
 

@@ -207,6 +207,11 @@ CREATE POLICY "Users can register for events"
 ON event_registrations FOR INSERT
 WITH CHECK (user_email = auth.jwt() ->> 'email');
 
+DROP POLICY IF EXISTS "Users can update their own registrations" ON event_registrations;
+CREATE POLICY "Users can update their own registrations"
+ON event_registrations FOR UPDATE
+USING (user_email = auth.jwt() ->> 'email');
+
 DROP POLICY IF EXISTS "Admins can update registrations" ON event_registrations;
 CREATE POLICY "Admins can update registrations"
 ON event_registrations FOR UPDATE
