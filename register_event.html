@@ -289,7 +289,9 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" crossorigin></script>
+    <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
     <script src="js/supabase.js"></script>
+    <script src="js/payment_config.js"></script>
     <script src="js/script.js?v=1.7"></script>
     <script>
         document.addEventListener('DOMContentLoaded', async () => {
@@ -367,14 +369,31 @@
             const mockPayBtn = document.getElementById('mockPayBtn');
 
             function showStep(stepNum) {
+                const step = parseInt(stepNum);
+                console.log('Showing Step:', step);
+
                 [step1, step2, step3].forEach((s, i) => {
-                    s.classList.toggle('active', i + 1 === stepNum);
+                    const currentStepNum = i + 1;
+                    if (currentStepNum === step) {
+                        s.classList.add('active');
+                    } else {
+                        s.classList.remove('active');
+                    }
                 });
 
                 for (let i = 1; i <= 3; i++) {
                     const circle = document.getElementById(`step${i}-circle`);
-                    if (i < stepNum) circle.classList.add('completed');
-                    circle.classList.toggle('active', i === stepNum);
+                    if (circle) {
+                        if (i < step) {
+                            circle.classList.add('completed');
+                            circle.classList.remove('active');
+                        } else if (i === step) {
+                            circle.classList.add('active');
+                            circle.classList.remove('completed');
+                        } else {
+                            circle.classList.remove('active', 'completed');
+                        }
+                    }
                 }
             }
 
@@ -426,22 +445,78 @@
                     const statusText = document.getElementById('statusText');
                     if (isAdmin) {
                         statusText.innerHTML = '<span style="color: #22c55e; font-weight: 600;">Status: Payment Confirmed (Admin)</span>';
+                        showStep(3); // Admins skip directly to success
+                    } else if (currentEvent.price == 0) {
+                        statusText.innerHTML = '<span style="color: #22c55e; font-weight: 600;">Status: Registered (Free Event)</span>';
+                        showStep(3); // Free events skip to success
                     } else {
                         statusText.innerHTML = '<span style="color: #eab308; font-weight: 600;">Status: Pending Payment Approval</span>';
+                        showStep(2); // Regular users go to payment
                     }
-                    showStep(2);
                 }
             }
 
             skipBtn.onclick = registerUser;
             confirmBtn.onclick = registerUser;
 
-            mockPayBtn.onclick = () => {
-                mockPayBtn.textContent = 'Processing...';
-                mockPayBtn.disabled = true;
-                setTimeout(() => {
-                    showStep(3);
-                }, 1500);
+            function initializeRazorpay(registrationId, amount, eventName, userEmail) {
+                const options = {
+                    "key": RAZORPAY_CONFIG.key_id,
+                    "amount": amount * 100, // Razorpay works in paisa
+                    "currency": "INR",
+                    "name": RAZORPAY_CONFIG.merchant_name,
+                    "description": `Registration for ${eventName}`,
+                    "handler": async function (response) {
+                        // Payment Success handler
+                        const { error } = await supabase
+                            .from('event_registrations')
+                            .update({
+                                payment_status: 'paid',
+                                razorpay_payment_id: response.razorpay_payment_id,
+                                razorpay_order_id: response.razorpay_order_id,
+                                razorpay_signature: response.razorpay_signature
+                            })
+                            .eq('id', registrationId);
+
+                        if (error) {
+                            alert('Payment recorded, but failed to update status: ' + error.message);
+                        } else {
+                            const statusText = document.getElementById('statusText');
+                            statusText.innerHTML = '<span style="color: #22c55e; font-weight: 600;">Status: Payment Successful</span>';
+                            showStep(3);
+                        }
+                    },
+                    "prefill": {
+                        "email": userEmail,
+                        "contact": document.getElementById('phone').value
+                    },
+                    "theme": {
+                        "color": RAZORPAY_CONFIG.theme_color
+                    }
+                };
+                const rzp1 = new Razorpay(options);
+                rzp1.on('payment.failed', function (response) {
+                    alert('Payment Failed: ' + response.error.description);
+                });
+                rzp1.open();
+            }
+
+            mockPayBtn.onclick = async () => {
+                const userEmail = emailField.value;
+                // Get the registration record to ensure we have the ID
+                const { data: reg, error } = await supabase
+                    .from('event_registrations')
+                    .select('id')
+                    .eq('event_id', eventId)
+                    .eq('user_email', userEmail)
+                    .single();
+
+                if (error || !reg) {
+                    alert('Error finding registration record.');
+                    return;
+                }
+
+                initializeRazorpay(reg.id, currentEvent.price, currentEvent.name, userEmail);
             };
 
             // Change detection
