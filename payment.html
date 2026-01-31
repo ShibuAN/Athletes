@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Secure Payment - Athletes</title>
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        .payment-container {
+            padding-top: calc(var(--header-height) + 4rem);
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .order-summary {
+            margin-bottom: 2rem;
+            padding-bottom: 1.5rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .summary-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 0.8rem;
+        }
+
+        .total-item {
+            display: flex;
+            justify-content: space-between;
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: var(--primary);
+            margin-top: 1rem;
+        }
+
+        .razorpay-btn {
+            background: #3395FF;
+            color: white;
+            padding: 1.2rem;
+            border-radius: 0.5rem;
+            width: 100%;
+            border: none;
+            font-weight: bold;
+            font-size: 1.1rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            transition: all 0.3s ease;
+        }
+
+        .razorpay-btn:hover {
+            background: #2185f4;
+            transform: scale(1.02);
+        }
+
+        .razorpay-logo {
+            height: 20px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="bg-glow"></div>
+    <nav class="navbar">
+        <a href="index.html" class="nav-logo">ATHLETES</a>
+    </nav>
+
+    <div class="container payment-container">
+        <div class="glass-card" style="padding: 3rem;">
+            <h2 style="margin-bottom: 2rem; text-align: center;">Order Summary</h2>
+
+            <div class="order-summary">
+                <div class="summary-item">
+                    <span>Registration Fee</span>
+                    <span>₹1,499.00</span>
+                </div>
+                <div class="summary-item">
+                    <span>Processing Fee</span>
+                    <span>₹49.00</span>
+                </div>
+                <div class="total-item">
+                    <span>Total Amount</span>
+                    <span>₹1,548.00</span>
+                </div>
+            </div>
+
+            <p style="text-align: center; color: var(--text-muted); font-size: 0.9rem; margin-bottom: 2rem;">
+                Secure payment handled by Razorpay. All major cards and UPI accepted.
+            </p>
+
+            <button id="payNowBtn" class="razorpay-btn">
+                <img src="https://razorpay.com/favicon.png" alt="" class="razorpay-logo">
+                PAY NOW
+            </button>
+
+            <div id="paymentStatus" style="margin-top: 2rem; text-align: center; display: none;">
+                <p style="color: #22c55e; font-weight: bold;">Processing Secure Payment...</p>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="js/supabase.js"></script>
+    <script src="js/script.js"></script>
+</body>
+
+</html>

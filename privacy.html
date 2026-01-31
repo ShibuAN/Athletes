@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Privacy Policy - Athletes</title>
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        .content-container {
+            padding-top: calc(var(--header-height) + 4rem);
+            max-width: 800px;
+            margin: 0 auto;
+            color: var(--text-muted);
+            line-height: 1.8;
+        }
+
+        h1,
+        h2 {
+            color: white;
+            margin-top: 2rem;
+        }
+
+        .glass-card {
+            padding: 3rem;
+            margin-bottom: 4rem;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="bg-glow"></div>
+    <nav class="navbar">
+        <a href="index.html" class="nav-logo">ATHLETES</a>
+        <div class="nav-links">
+            <!-- Dynamic links (Home, Membership, Community, Events, Leaderboard, Dashboard, Logout/Login) will be injected here by script.js -->
+        </div>
+    </nav>
+
+    <div class="container content-container">
+        <div class="glass-card">
+            <h1 class="text-gradient">Privacy Policy</h1>
+            <p>Last Updated: January 28, 2026</p>
+
+            <h2>1. Introduction</h2>
+            <p>Athletes ("we", "us", "our") is committed to protecting your privacy. This Privacy Policy explains how we
+                collect, use, and safeguard your information when you connect your Strava account to our platform.</p>
+
+            <h2>2. Information We Collect</h2>
+            <p>When you authorize our application via Strava, we collect the following data:</p>
+            <ul>
+                <li>Your Strava Athlete ID and name.</li>
+                <li>Your workout activities (distance, duration, type, and date).</li>
+            </ul>
+
+            <h2>3. How We Use Your Information</h2>
+            <p>We use this data solely to:</p>
+            <ul>
+                <li>Display your own activity history on your private dashboard.</li>
+                <li>Include your stats on the platform leaderboard.</li>
+            </ul>
+            <p><strong>Note:</strong> Per Strava's 2026 guidelines, your detailed activity data is only displayed to
+                you. We do not use your data for AI training or share it with third parties.</p>
+
+            <h2>4. Data Security</h2>
+            <p>We use industry-standard security measures (Supabase) to protect your authentication tokens and activity
+                data.</p>
+
+            <h2>5. Your Rights & Deletion</h2>
+            <p>You can disconnect your Strava account at any time through your settings. To request full deletion of
+                your data from our servers, please contact us or delete your profile within the app.</p>
+
+            <div style="margin-top: 3rem;">
+                <a href="index.html" class="btn btn-primary">Back to Home</a>
+            </div>
+        </div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" crossorigin></script>
+    <script src="js/supabase.js"></script>
+    <script src="js/script.js?v=1.5"></script>
+</body>
+
+</html>

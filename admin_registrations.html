@@ -1,0 +1,769 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin - Event Registrations</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .admin-container {
+            padding-top: calc(var(--header-height) + 2rem);
+            padding-bottom: 4rem;
+        }
+
+        .admin-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .admin-header h2 {
+            margin: 0;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 0.75rem;
+        }
+
+        .filter-section {
+            margin-bottom: 2rem;
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .filter-section select,
+        .filter-section input {
+            min-width: 150px;
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid var(--border);
+            color: var(--text-main);
+            padding: 0.6rem 1rem;
+            border-radius: 0.5rem;
+        }
+
+        .stats-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-mini {
+            background: rgba(168, 85, 247, 0.1);
+            border: 1px solid var(--border);
+            padding: 1rem;
+            border-radius: 0.75rem;
+            text-align: center;
+        }
+
+        .stat-mini .value {
+            font-size: 1.75rem;
+            font-weight: 800;
+            color: var(--primary);
+        }
+
+        .stat-mini .label {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+        }
+
+        .registration-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .registration-table th,
+        .registration-table td {
+            padding: 1rem;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .registration-table th {
+            background: rgba(0, 0, 0, 0.3);
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 0.75rem;
+            letter-spacing: 1px;
+            color: var(--text-muted);
+        }
+
+        .registration-table tr:hover {
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        .badge {
+            padding: 0.25rem 0.75rem;
+            border-radius: 1rem;
+            font-size: 0.7rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .badge-pending {
+            background: rgba(234, 179, 8, 0.15);
+            color: #eab308;
+            border: 1px solid rgba(234, 179, 8, 0.3);
+        }
+
+        .badge-paid {
+            background: rgba(34, 197, 94, 0.15);
+            color: #22c55e;
+            border: 1px solid rgba(34, 197, 94, 0.3);
+        }
+
+        .action-btns {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .btn-icon {
+            width: 32px;
+            height: 32px;
+            border-radius: 0.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: none;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-approve {
+            background: rgba(34, 197, 94, 0.2);
+            color: #22c55e;
+        }
+
+        .btn-approve:hover {
+            background: rgba(34, 197, 94, 0.4);
+        }
+
+        .btn-revert {
+            background: rgba(234, 179, 8, 0.2);
+            color: #eab308;
+        }
+
+        .btn-revert:hover {
+            background: rgba(234, 179, 8, 0.4);
+        }
+
+        .btn-delete {
+            background: rgba(239, 68, 68, 0.2);
+            color: #ef4444;
+        }
+
+        .btn-delete:hover {
+            background: rgba(239, 68, 68, 0.4);
+        }
+
+        .checkbox-cell {
+            width: 40px;
+        }
+
+        .bulk-actions {
+            display: none;
+            gap: 0.75rem;
+            padding: 1rem;
+            background: rgba(168, 85, 247, 0.1);
+            border-radius: 0.5rem;
+            margin-bottom: 1rem;
+            align-items: center;
+        }
+
+        .bulk-actions.show {
+            display: flex;
+        }
+
+        .bulk-actions span {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+        }
+
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.show {
+            display: flex;
+        }
+
+        .modal-content {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 1rem;
+            padding: 2rem;
+            width: 90%;
+            max-width: 500px;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .modal-header h3 {
+            margin: 0;
+            color: var(--primary);
+        }
+
+        .close-btn {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            font-size: 1.5rem;
+            cursor: pointer;
+        }
+
+        .form-group {
+            margin-bottom: 1.25rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: var(--text-muted);
+            font-size: 0.85rem;
+        }
+
+        .form-group select,
+        .form-group input {
+            width: 100%;
+            padding: 0.75rem;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--border);
+            border-radius: 0.5rem;
+            color: var(--text-main);
+        }
+
+        .radio-group {
+            display: flex;
+            gap: 1.5rem;
+        }
+
+        .radio-group label {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            cursor: pointer;
+        }
+
+        @media (max-width: 768px) {
+            .registration-table {
+                display: block;
+                overflow-x: auto;
+            }
+
+            .filter-section {
+                flex-direction: column;
+            }
+
+            .filter-section select,
+            .filter-section input {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="bg-glow"></div>
+
+    <nav class="navbar">
+        <a href="index.html" class="nav-logo">ATHLETES</a>
+        <div class="nav-links">
+            <!-- Dynamically loaded by script.js -->
+        </div>
+    </nav>
+
+    <div class="container admin-container">
+        <div class="glass-card">
+            <div class="admin-header">
+                <h2 class="text-gradient">Event Registrations</h2>
+                <div class="header-actions">
+                    <button class="btn btn-primary" onclick="openAddModal()">
+                        <i class="fas fa-plus"></i> Add Registration
+                    </button>
+                    <button class="btn btn-outline" onclick="exportToCSV()">
+                        <i class="fas fa-download"></i> Export CSV
+                    </button>
+                </div>
+            </div>
+
+            <!-- Stats Row -->
+            <div class="stats-row">
+                <div class="stat-mini">
+                    <div class="value" id="totalRegistrations">0</div>
+                    <div class="label">Total</div>
+                </div>
+                <div class="stat-mini">
+                    <div class="value" id="paidCount">0</div>
+                    <div class="label">Paid</div>
+                </div>
+                <div class="stat-mini">
+                    <div class="value" id="pendingCount">0</div>
+                    <div class="label">Pending</div>
+                </div>
+            </div>
+
+            <!-- Filters -->
+            <div class="filter-section">
+                <select id="eventFilter">
+                    <option value="all">All Events</option>
+                </select>
+                <select id="statusFilter">
+                    <option value="all">All Status</option>
+                    <option value="pending">Pending Only</option>
+                    <option value="paid">Paid Only</option>
+                </select>
+                <input type="text" id="searchUser" placeholder="Search by email...">
+            </div>
+
+            <!-- Bulk Actions -->
+            <div class="bulk-actions" id="bulkActions">
+                <span><strong id="selectedCount">0</strong> selected</span>
+                <button class="btn btn-sm btn-primary" onclick="bulkApprove()">Approve All</button>
+                <button class="btn btn-sm btn-outline" onclick="bulkDelete()">Delete All</button>
+                <button class="btn btn-sm" onclick="clearSelection()">Clear</button>
+            </div>
+
+            <!-- Table -->
+            <div style="overflow-x: auto;">
+                <table class="registration-table">
+                    <thead>
+                        <tr>
+                            <th class="checkbox-cell">
+                                <input type="checkbox" id="selectAll" onchange="toggleSelectAll()">
+                            </th>
+                            <th>User</th>
+                            <th>Event</th>
+                            <th>Status</th>
+                            <th>Date</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="registrationsList">
+                        <tr>
+                            <td colspan="6" style="text-align: center; padding: 2rem; color: var(--text-muted);">
+                                Loading registrations...
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Registration Modal -->
+    <div class="modal" id="addModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Add Registration</h3>
+                <button class="close-btn" onclick="closeAddModal()">&times;</button>
+            </div>
+            <form id="addRegistrationForm">
+                <div class="form-group">
+                    <label>Select User</label>
+                    <select id="addUserEmail" required>
+                        <option value="">-- Select User --</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Select Event</label>
+                    <select id="addEventId" required>
+                        <option value="">-- Select Event --</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Payment Status</label>
+                    <div class="radio-group">
+                        <label>
+                            <input type="radio" name="paymentStatus" value="pending" checked>
+                            Pending
+                        </label>
+                        <label>
+                            <input type="radio" name="paymentStatus" value="paid">
+                            Paid
+                        </label>
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-primary" style="width: 100%;">
+                    <i class="fas fa-plus"></i> Add Registration
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" crossorigin></script>
+    <script src="js/supabase.js"></script>
+    <script src="js/script.js?v=1.8"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            const supabase = window.supabaseClient;
+            let allRegistrations = [];
+            let allUsers = [];
+            let allEvents = [];
+            let selectedIds = new Set();
+
+            // Check Admin Access
+            async function checkAdmin() {
+                const { data: { session } } = await supabase.auth.getSession();
+                if (!session) {
+                    window.location.href = 'login.html';
+                    return false;
+                }
+
+                const { data } = await supabase
+                    .from('profiles')
+                    .select('role')
+                    .eq('email', session.user.email)
+                    .single();
+
+                if (data?.role !== 'admin') {
+                    alert('Access Denied.');
+                    window.location.href = 'index.html';
+                    return false;
+                }
+                return true;
+            }
+
+            // Load initial data
+            async function init() {
+                if (!await checkAdmin()) return;
+                await Promise.all([loadUsers(), loadEvents()]);
+                await loadRegistrations();
+            }
+
+            async function loadUsers() {
+                const { data } = await supabase.from('profiles').select('email, first_name, last_name');
+                allUsers = data || [];
+
+                const userSelect = document.getElementById('addUserEmail');
+                userSelect.innerHTML = '<option value="">-- Select User --</option>' +
+                    allUsers.map(u => `<option value="${u.email}">${u.first_name || ''} ${u.last_name || ''} (${u.email})</option>`).join('');
+            }
+
+            async function loadEvents() {
+                const { data } = await supabase.from('events').select('id, name, is_active').order('start_date', { ascending: false });
+                allEvents = data || [];
+
+                // Event filter dropdown
+                const eventFilter = document.getElementById('eventFilter');
+                eventFilter.innerHTML = '<option value="all">All Events</option>' +
+                    allEvents.map(e => `<option value="${e.id}">${e.name}${e.is_active ? '' : ' (Inactive)'}</option>`).join('');
+
+                // Add modal dropdown
+                const eventSelect = document.getElementById('addEventId');
+                eventSelect.innerHTML = '<option value="">-- Select Event --</option>' +
+                    allEvents.filter(e => e.is_active).map(e => `<option value="${e.id}">${e.name}</option>`).join('');
+            }
+
+            async function loadRegistrations() {
+                const eventFilter = document.getElementById('eventFilter').value;
+                const statusFilter = document.getElementById('statusFilter').value;
+                const search = document.getElementById('searchUser').value.toLowerCase();
+
+                let query = supabase
+                    .from('event_registrations')
+                    .select('*, events(name)')
+                    .order('registration_date', { ascending: false });
+
+                if (eventFilter !== 'all') {
+                    query = query.eq('event_id', eventFilter);
+                }
+                if (statusFilter !== 'all') {
+                    query = query.eq('payment_status', statusFilter);
+                }
+
+                const { data, error } = await query;
+
+                if (error) {
+                    console.error('Error:', error);
+                    return;
+                }
+
+                allRegistrations = data || [];
+
+                // Filter by search
+                const filtered = allRegistrations.filter(r =>
+                    r.user_email.toLowerCase().includes(search)
+                );
+
+                // Update stats
+                document.getElementById('totalRegistrations').textContent = allRegistrations.length;
+                document.getElementById('paidCount').textContent = allRegistrations.filter(r => r.payment_status === 'paid').length;
+                document.getElementById('pendingCount').textContent = allRegistrations.filter(r => r.payment_status === 'pending').length;
+
+                renderTable(filtered);
+            }
+
+            function renderTable(data) {
+                const tbody = document.getElementById('registrationsList');
+
+                if (data.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 2rem; color: var(--text-muted);">No registrations found.</td></tr>';
+                    return;
+                }
+
+                tbody.innerHTML = data.map(reg => {
+                    const isPaid = reg.payment_status === 'paid';
+                    const isChecked = selectedIds.has(reg.id) ? 'checked' : '';
+
+                    return `
+                        <tr data-id="${reg.id}">
+                            <td class="checkbox-cell">
+                                <input type="checkbox" ${isChecked} onchange="toggleSelect('${reg.id}')">
+                            </td>
+                            <td>
+                                <div style="font-weight: 600;">${reg.user_email}</div>
+                            </td>
+                            <td>${reg.events?.name || 'Unknown'}</td>
+                            <td>
+                                <span class="badge ${isPaid ? 'badge-paid' : 'badge-pending'}">
+                                    ${reg.payment_status.toUpperCase()}
+                                </span>
+                            </td>
+                            <td>${new Date(reg.registration_date).toLocaleDateString()}</td>
+                            <td>
+                                <div class="action-btns">
+                                    ${isPaid ? `
+                                        <button class="btn-icon btn-revert" onclick="updateStatus('${reg.id}', 'pending')" title="Revert to Pending">
+                                            <i class="fas fa-undo"></i>
+                                        </button>
+                                    ` : `
+                                        <button class="btn-icon btn-approve" onclick="updateStatus('${reg.id}', 'paid')" title="Approve Payment">
+                                            <i class="fas fa-check"></i>
+                                        </button>
+                                    `}
+                                    <button class="btn-icon btn-delete" onclick="deleteRegistration('${reg.id}')" title="Delete">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    `;
+                }).join('');
+            }
+
+            // Global functions
+            window.updateStatus = async (id, newStatus) => {
+                const { error } = await supabase
+                    .from('event_registrations')
+                    .update({ payment_status: newStatus })
+                    .eq('id', id);
+
+                if (error) {
+                    alert('Error: ' + error.message);
+                } else {
+                    loadRegistrations();
+                }
+            };
+
+            window.deleteRegistration = async (id) => {
+                if (!confirm('Are you sure you want to delete this registration?')) return;
+
+                const { error } = await supabase
+                    .from('event_registrations')
+                    .delete()
+                    .eq('id', id);
+
+                if (error) {
+                    alert('Error: ' + error.message);
+                } else {
+                    selectedIds.delete(id);
+                    updateBulkActions();
+                    loadRegistrations();
+                }
+            };
+
+            window.toggleSelect = (id) => {
+                if (selectedIds.has(id)) {
+                    selectedIds.delete(id);
+                } else {
+                    selectedIds.add(id);
+                }
+                updateBulkActions();
+            };
+
+            window.toggleSelectAll = () => {
+                const selectAll = document.getElementById('selectAll').checked;
+                const checkboxes = document.querySelectorAll('#registrationsList input[type="checkbox"]');
+
+                if (selectAll) {
+                    checkboxes.forEach(cb => {
+                        const id = cb.closest('tr').dataset.id;
+                        selectedIds.add(id);
+                        cb.checked = true;
+                    });
+                } else {
+                    selectedIds.clear();
+                    checkboxes.forEach(cb => cb.checked = false);
+                }
+                updateBulkActions();
+            };
+
+            window.clearSelection = () => {
+                selectedIds.clear();
+                document.getElementById('selectAll').checked = false;
+                document.querySelectorAll('#registrationsList input[type="checkbox"]').forEach(cb => cb.checked = false);
+                updateBulkActions();
+            };
+
+            function updateBulkActions() {
+                const bulkActions = document.getElementById('bulkActions');
+                const count = document.getElementById('selectedCount');
+                count.textContent = selectedIds.size;
+
+                if (selectedIds.size > 0) {
+                    bulkActions.classList.add('show');
+                } else {
+                    bulkActions.classList.remove('show');
+                }
+            }
+
+            window.bulkApprove = async () => {
+                if (selectedIds.size === 0) return;
+                if (!confirm(`Approve payment for ${selectedIds.size} registrations?`)) return;
+
+                const ids = Array.from(selectedIds);
+                const { error } = await supabase
+                    .from('event_registrations')
+                    .update({ payment_status: 'paid' })
+                    .in('id', ids);
+
+                if (error) {
+                    alert('Error: ' + error.message);
+                } else {
+                    clearSelection();
+                    loadRegistrations();
+                }
+            };
+
+            window.bulkDelete = async () => {
+                if (selectedIds.size === 0) return;
+                if (!confirm(`Delete ${selectedIds.size} registrations? This cannot be undone!`)) return;
+
+                const ids = Array.from(selectedIds);
+                const { error } = await supabase
+                    .from('event_registrations')
+                    .delete()
+                    .in('id', ids);
+
+                if (error) {
+                    alert('Error: ' + error.message);
+                } else {
+                    clearSelection();
+                    loadRegistrations();
+                }
+            };
+
+            window.openAddModal = () => {
+                document.getElementById('addModal').classList.add('show');
+            };
+
+            window.closeAddModal = () => {
+                document.getElementById('addModal').classList.remove('show');
+                document.getElementById('addRegistrationForm').reset();
+            };
+
+            window.exportToCSV = () => {
+                if (allRegistrations.length === 0) {
+                    alert('No data to export');
+                    return;
+                }
+
+                const headers = ['User Email', 'Event', 'Payment Status', 'Registration Date'];
+                const rows = allRegistrations.map(r => [
+                    r.user_email,
+                    r.events?.name || 'Unknown',
+                    r.payment_status,
+                    new Date(r.registration_date).toLocaleDateString()
+                ]);
+
+                const csv = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+                const blob = new Blob([csv], { type: 'text/csv' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'registrations_export.csv';
+                a.click();
+            };
+
+            // Add Registration Form Submit
+            document.getElementById('addRegistrationForm').addEventListener('submit', async (e) => {
+                e.preventDefault();
+
+                const userEmail = document.getElementById('addUserEmail').value;
+                const eventId = document.getElementById('addEventId').value;
+                const paymentStatus = document.querySelector('input[name="paymentStatus"]:checked').value;
+
+                if (!userEmail || !eventId) {
+                    alert('Please select both user and event');
+                    return;
+                }
+
+                // Check if already registered
+                const { data: existing } = await supabase
+                    .from('event_registrations')
+                    .select('id')
+                    .eq('user_email', userEmail)
+                    .eq('event_id', eventId)
+                    .single();
+
+                if (existing) {
+                    alert('This user is already registered for this event!');
+                    return;
+                }
+
+                const { error } = await supabase
+                    .from('event_registrations')
+                    .insert([{
+                        user_email: userEmail,
+                        event_id: eventId,
+                        payment_status: paymentStatus,
+                        registration_date: new Date().toISOString()
+                    }]);
+
+                if (error) {
+                    alert('Error: ' + error.message);
+                } else {
+                    alert('Registration added successfully!');
+                    closeAddModal();
+                    loadRegistrations();
+                }
+            });
+
+            // Event listeners for filters
+            document.getElementById('eventFilter').addEventListener('change', loadRegistrations);
+            document.getElementById('statusFilter').addEventListener('change', loadRegistrations);
+            document.getElementById('searchUser').addEventListener('input', loadRegistrations);
+
+            // Initialize
+            init();
+        });
+    </script>
+</body>
+
+</html>

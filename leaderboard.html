@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Leaderboard - Athletes</title>
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        .leaderboard-container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding-top: calc(var(--header-height) + 4rem);
+        }
+
+        .leaderboard-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .rank-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .rank-table th,
+        .rank-table td {
+            text-align: left;
+            padding: 1rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .rank-table th {
+            color: var(--text-muted);
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 0.8rem;
+            letter-spacing: 0.05em;
+        }
+
+        .rank-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            font-weight: bold;
+            font-size: 0.9rem;
+        }
+
+        .rank-1 {
+            background: linear-gradient(135deg, #ffd700, #f59e0b);
+            color: #000;
+            box-shadow: 0 0 10px rgba(245, 158, 11, 0.4);
+        }
+
+        .rank-2 {
+            background: linear-gradient(135deg, #e5e7eb, #9ca3af);
+            color: #000;
+        }
+
+        .rank-3 {
+            background: linear-gradient(135deg, #d97706, #78350f);
+            color: #fff;
+        }
+
+        tr.current-user {
+            background: rgba(var(--primary-rgb), 0.1);
+            border: 1px solid var(--primary);
+        }
+    </style>
+</head>
+
+<body>
+    <div class="bg-glow"></div>
+
+    <nav class="navbar">
+        <a href="index.html" class="nav-logo">ATHLETES</a>
+        <div class="nav-links">
+            <!-- Dynamically loaded by script.js -->
+        </div>
+    </nav>
+
+    <div class="container leaderboard-container" style="position: relative; z-index: 2;">
+        <div class="glass-card">
+            <div class="leaderboard-header">
+                <h1 class="text-gradient">Leaderboard</h1>
+                <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+                    <select id="eventNameFilter" class="btn btn-outline"
+                        style="min-width: 200px; background: rgba(0,0,0,0.2);">
+                        <option value="all">All Events</option>
+                        <option value="marathon">City Marathon 2023</option>
+                        <option value="swimming">Aquatic Championship</option>
+                        <option value="lifting">Iron Lifter</option>
+                    </select>
+
+                    <select id="activityTypeFilter" class="btn btn-outline"
+                        style="min-width: 200px; background: rgba(0,0,0,0.2);">
+                        <option value="all">All Activities</option>
+                        <option value="walk">Walk</option>
+                        <option value="hiking">Hiking</option>
+                        <option value="run">Run</option>
+                        <option value="cycling">Cycling</option>
+                        <option value="swimming">Swimming</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <table class="rank-table">
+            <thead>
+                <tr>
+                    <th>Athlete</th>
+                    <th>Eligible Days</th>
+                    <th>Completed Days</th>
+                </tr>
+            </thead>
+            <tbody id="leaderboardBody">
+                <!-- Rows will be injected by JS -->
+                <tr>
+                    <td colspan="3" style="text-align: center; color: var(--text-muted); padding: 2rem;">
+                        Loading participants...
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" crossorigin></script>
+    <script src="js/supabase.js"></script>
+    <script src="js/strava_config.js"></script>
+    <script src="js/strava_api.js?v=1.1"></script>
+    <script src="js/script.js?v=1.7"></script>
+    <script src="js/leaderboard_logic.js?v=1.2"></script>
+</body>
+
+</html>

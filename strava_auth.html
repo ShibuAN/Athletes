@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Strava Authorization - Athletes</title>
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        .auth-container {
+            padding-top: calc(var(--header-height) + 4rem);
+            max-width: 600px;
+            margin: 0 auto;
+            text-align: center;
+        }
+
+        .strava-card {
+            padding: 3rem;
+        }
+
+        .strava-btn {
+            background: #FC6100;
+            color: white;
+            padding: 1.2rem 2.5rem;
+            border-radius: 0.5rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 1rem;
+            font-weight: bold;
+            text-decoration: none;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            border: none;
+            font-size: 1.1rem;
+            margin-top: 2rem;
+        }
+
+        .strava-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 5px 15px rgba(252, 97, 0, 0.4);
+        }
+
+        .strava-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="bg-glow"></div>
+    <nav class="navbar">
+        <a href="index.html" class="nav-logo">ATHLETES</a>
+    </nav>
+
+    <div class="container auth-container">
+        <div class="glass-card strava-card">
+            <h2 class="text-gradient" style="margin-bottom: 1.5rem;">Connect Your Strava</h2>
+            <p style="color: var(--text-muted); line-height: 1.6;">
+                Authorize us to sync your workout activities directly from Strava.
+                This allows us to track your progress and update the leaderboard.
+            </p>
+
+            <button id="stravaConnectBtn" class="strava-btn">
+                Connect with STRAVA
+            </button>
+
+            <div style="margin-top: 1.5rem; font-size: 0.85rem;">
+                <p style="color: var(--text-muted);">
+                    By connecting, you agree to our
+                    <a href="privacy.html" style="color: var(--primary);">Privacy Policy</a> and
+                    <a href="terms.html" style="color: var(--primary);">Terms of Service</a>.
+                </p>
+                <p style="color: var(--text-muted); margin-top: 1rem;">
+                    Powered by Strava
+                </p>
+            </div>
+
+            <div id="statusMsg" style="margin-top: 2rem; display: none;">
+                <p style="color: #22c55e; font-weight: 600;">✓ Successfully connected! Redirecting to dashboard...</p>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="js/supabase.js"></script>
+    <script src="js/strava_config.js"></script>
+    <script src="js/strava_api.js"></script>
+    <script src="js/strava_auth.js"></script>
+    <script src="js/script.js"></script>
+</body>
+
+</html>

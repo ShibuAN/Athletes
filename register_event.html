@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Event Registration - Athletes</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        .registration-container {
+            padding-top: calc(var(--header-height) + 2rem);
+            padding-bottom: 4rem;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .step-indicator {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 3rem;
+            position: relative;
+        }
+
+        .step-indicator::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: var(--border);
+            z-index: 1;
+            transform: translateY(-50%);
+        }
+
+        .step {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: var(--card-bg);
+            border: 2px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            position: relative;
+            z-index: 2;
+            transition: all 0.3s ease;
+        }
+
+        .step.active {
+            border-color: var(--primary);
+            background: var(--primary);
+            color: white;
+            box-shadow: 0 0 15px var(--primary-glow);
+        }
+
+        .step.completed {
+            border-color: var(--primary);
+            background: var(--primary);
+            color: white;
+        }
+
+        .step-label {
+            position: absolute;
+            top: 45px;
+            font-size: 0.8rem;
+            white-space: nowrap;
+            color: var(--text-muted);
+        }
+
+        .step.active .step-label {
+            color: var(--primary);
+            font-weight: 600;
+        }
+
+        .form-step {
+            display: none;
+        }
+
+        .form-step.active {
+            display: block;
+            animation: fadeIn 0.5s ease;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+        }
+
+        .strava-connect {
+            text-align: center;
+            padding: 3rem;
+        }
+
+        .strava-btn {
+            background: #FC6100;
+            color: white;
+            padding: 1rem 2rem;
+            border-radius: 0.5rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 1rem;
+            font-weight: bold;
+            text-decoration: none;
+            transition: transform 0.2s;
+        }
+
+        .strava-btn:hover {
+            transform: scale(1.05);
+        }
+
+        .payment-box {
+            text-align: center;
+            padding: 2rem;
+            border: 1px solid var(--border);
+            border-radius: 1rem;
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .success-checkmark {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 2rem;
+            background: #22c55e;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 3rem;
+            color: white;
+        }
+
+        /* Specific Select Fix */
+        select.input-field {
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
+            cursor: pointer;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='rgba(255,255,255,0.5)' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 1rem center;
+            background-size: 1rem;
+            height: 3.5rem !important;
+            padding: 0 1rem !important;
+            font-size: 1rem;
+            color: var(--text-main);
+            background-color: rgba(0, 0, 0, 0.2);
+            line-height: normal;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="bg-glow"></div>
+
+    <nav class="navbar">
+        <a href="index.html" class="nav-logo">ATHLETES</a>
+        <div class="nav-links">
+            <!-- Dynamic links (Home, Membership, Community, Events, Leaderboard, Dashboard, Logout/Login) will be injected here by script.js -->
+        </div>
+    </nav>
+
+    <div class="container registration-container">
+        <div class="glass-card">
+            <h2 id="eventTitle" style="text-align: center; margin-bottom: 2rem;">Event Registration</h2>
+
+            <div class="step-indicator">
+                <div class="step active" id="step1-circle">1 <span class="step-label">Details</span></div>
+                <div class="step" id="step2-circle">2 <span class="step-label">Payment</span></div>
+                <div class="step" id="step3-circle">3 <span class="step-label">Success</span></div>
+            </div>
+
+            <form id="eventRegistrationForm">
+                <!-- STEP 1: PERSONAL DETAILS -->
+                <div class="form-step active" id="step1">
+                    <h3 style="margin-bottom: 1.5rem; color: var(--primary);">Confirm Your Details</h3>
+                    <div class="form-grid">
+                        <div class="input-group">
+                            <input type="text" id="firstName" class="input-field" placeholder=" " required>
+                            <label for="firstName" class="input-label">First Name *</label>
+                        </div>
+                        <div class="input-group">
+                            <input type="text" id="lastName" class="input-field" placeholder=" " required>
+                            <label for="lastName" class="input-label">Last Name *</label>
+                        </div>
+                        <div class="input-group">
+                            <input type="email" id="email" class="input-field" placeholder=" " required>
+                            <label for="email" class="input-label">Email *</label>
+                        </div>
+                        <div class="input-group">
+                            <input type="text" id="dob" class="input-field" placeholder=" " required>
+                            <label for="dob" class="input-label">Date of Birth (DD-MM-YYYY) *</label>
+                            <i class="fas fa-calendar date-icon"></i>
+                        </div>
+                        <div class="input-group">
+                            <select id="gender" class="input-field" required>
+                                <option value="" disabled selected>Select Gender *</option>
+                                <option value="Male">Male</option>
+                                <option value="Female">Female</option>
+                                <option value="Other">Other</option>
+                            </select>
+                        </div>
+                        <div class="input-group">
+                            <input type="text" id="bloodGroup" class="input-field" placeholder=" " required>
+                            <label for="bloodGroup" class="input-label">Blood Group *</label>
+                        </div>
+                        <div class="input-group">
+                            <input type="text" id="medicalIssues" class="input-field" placeholder=" ">
+                            <label for="medicalIssues" class="input-label">Medical Issues</label>
+                        </div>
+                        <div class="input-group">
+                            <input type="tel" id="phone" class="input-field" placeholder=" " required>
+                            <label for="phone" class="input-label">Phone Number *</label>
+                        </div>
+                        <div class="input-group">
+                            <input type="tel" id="whatsappNumber" class="input-field" placeholder=" " required>
+                            <label for="whatsappNumber" class="input-label">WhatsApp Number *</label>
+                        </div>
+                        <div class="input-group" style="grid-column: span 2;">
+                            <input type="text" id="address" class="input-field" placeholder=" " required>
+                            <label for="address" class="input-label">Address *</label>
+                        </div>
+                        <div class="input-group">
+                            <input type="text" id="city" class="input-field" placeholder=" " required>
+                            <label for="city" class="input-label">City *</label>
+                        </div>
+                        <div class="input-group">
+                            <input type="text" id="state" class="input-field" placeholder=" " required>
+                            <label for="state" class="input-label">State *</label>
+                        </div>
+                        <div class="input-group">
+                            <input type="text" id="pincode" class="input-field" placeholder=" " required>
+                            <label for="pincode" class="input-label">Pincode *</label>
+                        </div>
+                    </div>
+                    <div id="registrationActions"
+                        style="margin-top: 2rem; display: flex; justify-content: flex-end; gap: 1rem;">
+                        <button type="button" id="skipDetailsBtn" class="btn btn-secondary">Skip & Proceed</button>
+                        <button type="button" id="confirmDetailsBtn" class="btn btn-primary"
+                            style="display: none;">Confirm & Update</button>
+                    </div>
+                </div>
+
+                <!-- STEP 2: PAYMENT (Mock/Inline for now) -->
+                <div class="form-step" id="step2">
+                    <div style="text-align: center; padding: 2rem;" class="payment-box">
+                        <h3 style="margin-bottom: 1rem;">Order Summary</h3>
+                        <p style="font-size: 1.2rem; margin-bottom: 2rem;">Total Amount: <span id="eventPriceDisplay"
+                                style="color: var(--primary); font-weight: 800;">₹0.00</span></p>
+                        <button type="button" id="mockPayBtn" class="btn btn-primary"
+                            style="width: 100%; max-width: 300px;">Pay Now (Demo)</button>
+                    </div>
+                </div>
+
+                <!-- STEP 3: SUCCESS -->
+                <div class="form-step" id="step3">
+                    <div style="text-align: center; padding: 3rem;">
+                        <div class="success-checkmark">✓</div>
+                        <h2 class="text-gradient" style="margin-bottom: 1rem;">Registration Submitted!</h2>
+                        <p style="color: var(--text-muted); margin-bottom: 2rem;">
+                            You have successfully registered for <span id="finalEventName"
+                                style="color: var(--primary); font-weight: bold;"></span>.
+                            <br><br>
+                            <span id="statusText"><span style="color: #eab308; font-weight: 600;">Status: Pending
+                                    Payment Approval</span></span>
+                            <br>
+                            Please contact the admin to approve your participation.
+                        </p>
+                        <a href="dashboard.html" class="btn btn-primary">Go to Dashboard</a>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" crossorigin></script>
+    <script src="js/supabase.js"></script>
+    <script src="js/script.js?v=1.7"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            const supabase = window.supabaseClient;
+            const urlParams = new URLSearchParams(window.location.search);
+            const eventId = urlParams.get('id');
+
+            if (!eventId) {
+                alert('No event selected!');
+                window.location.href = 'events.html';
+                return;
+            }
+
+            const eventTitle = document.getElementById('eventTitle');
+            const finalEventName = document.getElementById('finalEventName');
+            const eventPriceDisplay = document.getElementById('eventPriceDisplay');
+
+            let currentEvent = null;
+
+            // 1. Load Event Details
+            const { data: event, error: eventError } = await supabase
+                .from('events')
+                .select('*')
+                .eq('id', eventId)
+                .single();
+
+            if (eventError || !event) {
+                alert('Event not found!');
+                window.location.href = 'events.html';
+                return;
+            }
+
+            currentEvent = event;
+            eventTitle.textContent = `Register for ${event.name}`;
+            finalEventName.textContent = event.name;
+            eventPriceDisplay.textContent = `₹${event.price}`;
+
+            // 2. Load User Data
+            const { data: { user } } = await supabase.auth.getUser();
+            const emailField = document.getElementById('email');
+
+            if (user) {
+                emailField.value = user.email;
+                emailField.disabled = true;
+
+                // Load existing profile details
+                const { data: profile } = await supabase
+                    .from('profiles')
+                    .select('*')
+                    .eq('email', user.email)
+                    .single();
+
+                if (profile) {
+                    document.getElementById('firstName').value = profile.first_name || '';
+                    document.getElementById('lastName').value = profile.last_name || '';
+                    document.getElementById('dob').value = profile.dob || '';
+                    document.getElementById('gender').value = profile.gender || '';
+                    document.getElementById('bloodGroup').value = profile.blood_group || '';
+                    document.getElementById('medicalIssues').value = profile.medical_issues || '';
+                    document.getElementById('phone').value = profile.phone || '';
+                    document.getElementById('whatsappNumber').value = profile.whatsapp_number || '';
+                    document.getElementById('address').value = profile.address || '';
+                    document.getElementById('city').value = profile.city || '';
+                    document.getElementById('state').value = profile.state || '';
+                    document.getElementById('pincode').value = profile.pincode || '';
+                }
+            }
+
+            // 3. Logic for steps
+            const step1 = document.getElementById('step1');
+            const step2 = document.getElementById('step2');
+            const step3 = document.getElementById('step3');
+            const skipBtn = document.getElementById('skipDetailsBtn');
+            const confirmBtn = document.getElementById('confirmDetailsBtn');
+            const mockPayBtn = document.getElementById('mockPayBtn');
+
+            function showStep(stepNum) {
+                [step1, step2, step3].forEach((s, i) => {
+                    s.classList.toggle('active', i + 1 === stepNum);
+                });
+
+                for (let i = 1; i <= 3; i++) {
+                    const circle = document.getElementById(`step${i}-circle`);
+                    if (i < stepNum) circle.classList.add('completed');
+                    circle.classList.toggle('active', i === stepNum);
+                }
+            }
+
+            async function registerUser() {
+                const userEmail = emailField.value;
+                if (!userEmail) {
+                    alert('Please provide an email.');
+                    return;
+                }
+
+                // Update Profile
+                const profileData = {
+                    email: userEmail,
+                    first_name: document.getElementById('firstName').value,
+                    last_name: document.getElementById('lastName').value,
+                    dob: document.getElementById('dob').value,
+                    gender: document.getElementById('gender').value,
+                    blood_group: document.getElementById('bloodGroup').value,
+                    medical_issues: document.getElementById('medicalIssues').value,
+                    phone: document.getElementById('phone').value,
+                    whatsapp_number: document.getElementById('whatsappNumber').value,
+                    address: document.getElementById('address').value,
+                    city: document.getElementById('city').value,
+                    state: document.getElementById('state').value,
+                    pincode: document.getElementById('pincode').value
+                };
+
+                await supabase.from('profiles').upsert(profileData);
+
+                // Create Registration
+                // Check if admin to auto-approve
+                const isAdmin = userEmail === 'shibukumarbe@gmail.com';
+
+                const { error } = await supabase.from('event_registrations').insert([
+                    {
+                        event_id: eventId,
+                        user_email: userEmail,
+                        payment_status: isAdmin ? 'paid' : 'pending'
+                    }
+                ]);
+
+                if (error && error.code === '23505') {
+                    alert('You are already registered for this event!');
+                    window.location.href = 'events.html';
+                } else if (error) {
+                    alert('Registration failed: ' + error.message);
+                } else {
+                    // Update success message based on status
+                    const statusText = document.getElementById('statusText');
+                    if (isAdmin) {
+                        statusText.innerHTML = '<span style="color: #22c55e; font-weight: 600;">Status: Payment Confirmed (Admin)</span>';
+                    } else {
+                        statusText.innerHTML = '<span style="color: #eab308; font-weight: 600;">Status: Pending Payment Approval</span>';
+                    }
+                    showStep(2);
+                }
+            }
+
+            skipBtn.onclick = registerUser;
+            confirmBtn.onclick = registerUser;
+
+            mockPayBtn.onclick = () => {
+                mockPayBtn.textContent = 'Processing...';
+                mockPayBtn.disabled = true;
+                setTimeout(() => {
+                    showStep(3);
+                }, 1500);
+            };
+
+            // Change detection
+            const inputs = document.querySelectorAll('.input-field');
+            inputs.forEach(input => {
+                input.oninput = () => {
+                    confirmBtn.style.display = 'block';
+                    skipBtn.style.display = 'none';
+                };
+            });
+        });
+    </script>
+</body>
+
+</html>

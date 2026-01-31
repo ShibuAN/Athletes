@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Activities - Athletes</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .activities-container {
+            padding-top: calc(var(--header-height) + 2rem);
+            padding-bottom: 4rem;
+        }
+
+        .activity-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1.5rem;
+            border-bottom: 1px solid var(--border);
+            transition: background 0.3s;
+        }
+
+        .activity-item:hover {
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        .activity-info h4 {
+            margin: 0;
+            color: var(--text-main);
+        }
+
+        .activity-info p {
+            margin: 0.2rem 0;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+
+        .activity-stats {
+            text-align: right;
+        }
+
+        .stat-main {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        .stat-sub {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+
+        .month-header {
+            color: var(--secondary);
+            font-size: 1.1rem;
+            margin: 2rem 0 1rem 0;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid var(--border);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-weight: 700;
+        }
+
+        .live-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: rgba(34, 197, 94, 0.15);
+            color: #22c55e;
+            padding: 0.4rem 0.8rem;
+            border-radius: 2rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+            margin-left: 1rem;
+        }
+
+        .live-badge::before {
+            content: '';
+            width: 6px;
+            height: 6px;
+            background: #22c55e;
+            border-radius: 50%;
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .type-badge {
+            display: inline-block;
+            padding: 0.2rem 0.5rem;
+            border-radius: 0.5rem;
+            font-size: 0.7rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            margin-right: 0.5rem;
+        }
+
+        .type-run { background: rgba(239, 68, 68, 0.15); color: #ef4444; }
+        .type-cycling { background: rgba(34, 197, 94, 0.15); color: #22c55e; }
+        .type-walk { background: rgba(59, 130, 246, 0.15); color: #3b82f6; }
+        .type-hiking { background: rgba(234, 179, 8, 0.15); color: #eab308; }
+        .type-swimming { background: rgba(6, 182, 212, 0.15); color: #06b6d4; }
+    </style>
+</head>
+
+<body>
+    <div class="bg-glow"></div>
+
+    <nav class="navbar">
+        <a href="index.html" class="nav-logo">ATHLETES</a>
+        <div class="nav-links">
+            <a href="index.html" class="nav-link">Home</a>
+            <a href="events.html" class="nav-link">Events</a>
+            <a href="leaderboard.html" class="nav-link">Leaderboard</a>
+            <a href="dashboard.html" class="nav-link">Dashboard</a>
+            <a href="#" id="logoutBtn" class="nav-link">Logout</a>
+        </div>
+    </nav>
+
+    <div class="container activities-container">
+        <div class="glass-card">
+            <header style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; flex-wrap: wrap; gap: 1rem;">
+                <div style="display: flex; align-items: center;">
+                    <h2 class="text-gradient" style="font-size: 2.5rem;">All Activities</h2>
+                    <span class="live-badge">LIVE FROM STRAVA</span>
+                </div>
+                <div style="display: flex; gap: 0.5rem;">
+                    <button id="refreshBtn" class="btn btn-primary btn-sm">
+                        <i class="fa-solid fa-sync"></i> Refresh
+                    </button>
+                    <a href="dashboard.html" class="btn btn-outline btn-sm">Back to Dashboard</a>
+                </div>
+            </header>
+
+            <div class="filters-row"
+                style="display: flex; gap: 1.5rem; align-items: center; margin-bottom: 3rem; padding: 1.5rem; background: rgba(255,255,255,0.03); border-radius: 12px; border: 1px solid var(--border);">
+                <div class="filter-group">
+                    <label style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 0.5rem; display: block; font-weight: 500;">Month</label>
+                    <select id="monthFilter" class="form-input filter-select"
+                        style="width: 180px; height: 48px; font-size: 1rem; cursor: pointer; transition: all 0.3s ease;">
+                        <option value="all">All Months</option>
+                        <option value="0">January</option>
+                        <option value="1">February</option>
+                        <option value="2">March</option>
+                        <option value="3">April</option>
+                        <option value="4">May</option>
+                        <option value="5">June</option>
+                        <option value="6">July</option>
+                        <option value="7">August</option>
+                        <option value="8">September</option>
+                        <option value="9">October</option>
+                        <option value="10">November</option>
+                        <option value="11">December</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 0.5rem; display: block; font-weight: 500;">Year</label>
+                    <select id="yearFilter" class="form-input filter-select"
+                        style="width: 140px; height: 48px; font-size: 1rem; cursor: pointer; transition: all 0.3s ease;">
+                        <option value="all">All Years</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 0.5rem; display: block; font-weight: 500;">Type</label>
+                    <select id="typeFilter" class="form-input filter-select"
+                        style="width: 140px; height: 48px; font-size: 1rem; cursor: pointer; transition: all 0.3s ease;">
+                        <option value="all">All Types</option>
+                        <option value="run">Run</option>
+                        <option value="cycling">Cycling</option>
+                        <option value="walk">Walk</option>
+                        <option value="hiking">Hiking</option>
+                        <option value="swimming">Swimming</option>
+                    </select>
+                </div>
+            </div>
+
+            <style>
+                .filter-select {
+                    background: rgba(255, 255, 255, 0.05) !important;
+                    border: 1px solid var(--border) !important;
+                    color: var(--text-main) !important;
+                }
+
+                .filter-select:hover {
+                    border-color: var(--primary) !important;
+                    color: var(--primary) !important;
+                    background: rgba(234, 88, 12, 0.05) !important;
+                    transform: translateY(-2px);
+                }
+
+                .filter-select option {
+                    background: var(--bg-dark);
+                    color: var(--text-main);
+                }
+            </style>
+
+            <div id="fullActivityList">
+                <div style="text-align: center; padding: 3rem; color: var(--text-muted);">
+                    <i class="fa-solid fa-spinner fa-spin fa-2x"></i>
+                    <p style="margin-top: 1rem;">Loading activities from Strava...</p>
+                </div>
+            </div>
+
+            <div id="lastUpdated" style="text-align: center; padding: 1rem; color: var(--text-muted); font-size: 0.8rem;"></div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" crossorigin></script>
+    <script src="js/supabase.js"></script>
+    <script src="js/strava_config.js"></script>
+    <script src="js/strava_api.js"></script>
+    <script src="js/script.js?v=1.8"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            const supabase = window.supabaseClient;
+            const listEl = document.getElementById('fullActivityList');
+            const monthFilter = document.getElementById('monthFilter');
+            const yearFilter = document.getElementById('yearFilter');
+            const typeFilter = document.getElementById('typeFilter');
+            const refreshBtn = document.getElementById('refreshBtn');
+            const lastUpdatedEl = document.getElementById('lastUpdated');
+            const user = localStorage.getItem('user');
+
+            let allActivities = [];
+            let userProfile = null;
+
+            if (!user) {
+                window.location.href = 'login.html';
+                return;
+            }
+
+            async function loadUserProfile() {
+                const { data: profile, error } = await supabase
+                    .from('profiles')
+                    .select('*')
+                    .eq('email', user)
+                    .single();
+
+                if (error || !profile) {
+                    listEl.innerHTML = '<div style="text-align: center; color: #ef4444; padding: 2rem;">Error loading profile.</div>';
+                    return null;
+                }
+
+                if (!profile.strava_connected) {
+                    listEl.innerHTML = `
+                        <div style="text-align: center; padding: 3rem; color: var(--text-muted);">
+                            <i class="fa-solid fa-link-slash fa-3x" style="margin-bottom: 1rem; opacity: 0.5;"></i>
+                            <p>Strava not connected.</p>
+                            <a href="strava_auth.html" class="btn btn-primary" style="margin-top: 1rem;">Connect Strava</a>
+                        </div>
+                    `;
+                    return null;
+                }
+
+                return profile;
+            }
+
+            async function loadAllActivities(forceRefresh = false) {
+                listEl.innerHTML = `
+                    <div style="text-align: center; padding: 3rem; color: var(--text-muted);">
+                        <i class="fa-solid fa-spinner fa-spin fa-2x"></i>
+                        <p style="margin-top: 1rem;">Fetching activities from Strava...</p>
+                    </div>
+                `;
+
+                try {
+                    if (!userProfile) {
+                        userProfile = await loadUserProfile();
+                        if (!userProfile) return;
+                    }
+
+                    // Clear cache if force refresh
+                    if (forceRefresh) {
+                        StravaAPI.clearCache(user);
+                    }
+
+                    // Fetch from Strava API (on-demand with caching)
+                    allActivities = await StravaAPI.fetchActivitiesOnDemand(user, userProfile, {
+                        forceRefresh: forceRefresh
+                    });
+
+                    // Populate years dropdown
+                    const years = [...new Set(allActivities.map(a => new Date(a.start_date).getFullYear()))].sort((a, b) => b - a);
+                    yearFilter.innerHTML = '<option value="all">All Years</option>';
+                    years.forEach(year => {
+                        const opt = document.createElement('option');
+                        opt.value = year;
+                        opt.textContent = year;
+                        yearFilter.appendChild(opt);
+                    });
+
+                    lastUpdatedEl.innerHTML = `<i class="fa-solid fa-clock"></i> Last fetched: ${new Date().toLocaleString()}`;
+
+                    renderActivities();
+                } catch (err) {
+                    console.error('Error loading activities:', err);
+                    listEl.innerHTML = `
+                        <div style="text-align: center; color: #ef4444; padding: 2rem;">
+                            <i class="fa-solid fa-exclamation-triangle fa-2x" style="margin-bottom: 1rem;"></i>
+                            <p>Error loading activities: ${err.message}</p>
+                            <button onclick="location.reload()" class="btn btn-outline" style="margin-top: 1rem;">Try Again</button>
+                        </div>
+                    `;
+                }
+            }
+
+            function renderActivities() {
+                const selectedMonth = monthFilter.value;
+                const selectedYear = yearFilter.value;
+                const selectedType = typeFilter.value;
+
+                const filtered = allActivities.filter(act => {
+                    const date = new Date(act.start_date);
+                    const matchMonth = selectedMonth === 'all' || date.getMonth().toString() === selectedMonth;
+                    const matchYear = selectedYear === 'all' || date.getFullYear().toString() === selectedYear;
+                    const matchType = selectedType === 'all' || act.type?.toLowerCase() === selectedType;
+                    return matchMonth && matchYear && matchType;
+                });
+
+                if (filtered.length > 0) {
+                    // Group by Month Year for display
+                    const grouped = {};
+                    filtered.forEach(act => {
+                        const date = new Date(act.start_date);
+                        const monthYear = date.toLocaleString('default', { month: 'long', year: 'numeric' });
+                        if (!grouped[monthYear]) grouped[monthYear] = [];
+                        grouped[monthYear].push(act);
+                    });
+
+                    let html = '';
+                    Object.keys(grouped).forEach(month => {
+                        html += `<h3 class="month-header">${month} (${grouped[month].length} activities)</h3>`;
+                        html += grouped[month].map(act => {
+                            const type = act.type?.toLowerCase() || 'other';
+                            const typeClass = ['run', 'cycling', 'walk', 'hiking', 'swimming'].includes(type) ? type : '';
+                            return `
+                            <div class="activity-item">
+                                <div class="activity-info">
+                                    <h4>
+                                        ${typeClass ? `<span class="type-badge type-${typeClass}">${act.type}</span>` : ''}
+                                        ${act.name || act.type}
+                                    </h4>
+                                    <p>${new Date(act.start_date).toLocaleDateString()} at ${new Date(act.start_date).toLocaleTimeString()}</p>
+                                </div>
+                                <div class="activity-stats">
+                                    <div class="stat-main">${(act.distance / 1000).toFixed(2)} km</div>
+                                    <div class="stat-sub">${Math.floor(act.moving_time / 60)}m ${act.moving_time % 60}s</div>
+                                </div>
+                            </div>
+                        `}).join('');
+                    });
+                    listEl.innerHTML = html;
+                } else {
+                    listEl.innerHTML = '<div style="text-align: center; padding: 4rem; color: var(--text-muted);">No activities found for the selected filters.</div>';
+                }
+            }
+
+            // Event listeners
+            monthFilter.addEventListener('change', renderActivities);
+            yearFilter.addEventListener('change', renderActivities);
+            typeFilter.addEventListener('change', renderActivities);
+
+            refreshBtn.addEventListener('click', async () => {
+                refreshBtn.disabled = true;
+                refreshBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Refreshing...';
+                await loadAllActivities(true);
+                refreshBtn.disabled = false;
+                refreshBtn.innerHTML = '<i class="fa-solid fa-sync"></i> Refresh';
+            });
+
+            // Initial load
+            await loadAllActivities();
+        });
+    </script>
+</body>
+
+</html>

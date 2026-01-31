@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Athletes - Push Beyond Limits</title>
+    <link rel="stylesheet" href="css/style.css">
+    <!-- FontAwesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+
+<body>
+    <div class="bg-glow"></div>
+
+    <!-- Navigation -->
+    <nav class="navbar">
+        <a href="index.html" class="nav-logo">ATHLETES</a>
+        <div class="nav-links">
+            <a href="index.html" class="nav-link active" data-nav="home">Home</a>
+            <a href="#membership" class="nav-link" data-nav="membership">Membership</a>
+            <a href="#community" class="nav-link" data-nav="community">Community</a>
+            <a href="events.html" class="nav-link">Events</a>
+            <a href="leaderboard.html" class="nav-link">Leaderboard</a>
+            <a href="login.html" class="nav-link">Login</a>
+            <a href="signup.html" class="btn btn-primary btn-sm">Sign Up</a>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section style="height: 100vh; display: flex; align-items: center; padding-top: var(--header-height);">
+        <div class="container" style="text-align: center; position: relative; z-index: 2;">
+            <h1 class="animate-float" style="margin-bottom: 1.5rem;">
+                UNLEASH YOUR <br>
+                <span class="text-gradient">LIMITLESS POTENTIAL</span>
+            </h1>
+            <p class="section-desc" style="font-size: 1.25rem; margin-bottom: 3rem;">
+                Join the elite community of athletes. Track your progress, compete in world-class events, and rise to
+                the
+                top of the leaderboard.
+            </p>
+            <div class="flex-center" style="gap: 1.5rem;">
+                <a href="signup.html" class="btn btn-primary">Start Your Journey</a>
+                <a href="events.html" class="btn btn-outline">Explore Events</a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section id="features">
+        <div class="container">
+            <div class="section-header">
+                <h2 class="section-title">Why Join <span class="text-gradient">Athletes</span>?</h2>
+                <p class="section-desc">Experience the ultimate platform designed for serious competitors.</p>
+            </div>
+            <div class="grid-cols-3">
+                <div class="glass-card">
+                    <i class="fa-solid fa-bolt text-gradient" style="font-size: 2.5rem; margin-bottom: 1.5rem;"></i>
+                    <h3>Performance Tracking</h3>
+                    <p style="color: var(--text-muted); margin-top: 1rem;">
+                        Advanced analytics to monitor every aspect of your training and performance gains.
+                    </p>
+                </div>
+                <div class="glass-card">
+                    <i class="fa-solid fa-trophy text-gradient" style="font-size: 2.5rem; margin-bottom: 1.5rem;"></i>
+                    <h3>Elite Competitions</h3>
+                    <p style="color: var(--text-muted); margin-top: 1rem;">
+                        Regular events and challenges that push you to test your limits against the best.
+                    </p>
+                </div>
+                <div class="glass-card">
+                    <i class="fa-solid fa-users text-gradient" style="font-size: 2.5rem; margin-bottom: 1.5rem;"></i>
+                    <h3>Global Community</h3>
+                    <p style="color: var(--text-muted); margin-top: 1rem;">
+                        Connect with like-minded individuals who share your passion for excellence.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Membership Section -->
+    <section id="membership">
+        <div class="container">
+            <div class="section-header">
+                <h2 class="section-title">Choose Your <span class="text-gradient">Path</span></h2>
+                <p class="section-desc">Flexible plans to support your athletic journey.</p>
+            </div>
+            <div class="grid-cols-3">
+                <div class="glass-card membership-card">
+                    <h3>Starter</h3>
+                    <div class="price">Free</div>
+                    <ul class="features-list">
+                        <li><i class="fa-solid fa-check check-icon"></i> Basic Tracking</li>
+                        <li><i class="fa-solid fa-check check-icon"></i> Community Access</li>
+                        <li><i class="fa-solid fa-check check-icon"></i> Public Events</li>
+                    </ul>
+                    <a href="signup.html" class="btn btn-outline" style="width: 100%;">Get Started</a>
+                </div>
+                <div class="glass-card membership-card featured">
+                    <div class="role-badge" style="position: absolute; top: 1rem; right: 1rem;">POPULAR</div>
+                    <h3>Pro Athlete</h3>
+                    <div class="price">$12<span>/mo</span></div>
+                    <ul class="features-list">
+                        <li><i class="fa-solid fa-check check-icon"></i> Advanced Analytics</li>
+                        <li><i class="fa-solid fa-check check-icon"></i> Exclusive Events</li>
+                        <li><i class="fa-solid fa-check check-icon"></i> Priority Support</li>
+                        <li><i class="fa-solid fa-check check-icon"></i> Custom Training Plans</li>
+                    </ul>
+                    <a href="payment.html" class="btn btn-primary" style="width: 100%;">Go Pro</a>
+                </div>
+                <div class="glass-card membership-card">
+                    <h3>Elite Team</h3>
+                    <div class="price">$29<span>/mo</span></div>
+                    <ul class="features-list">
+                        <li><i class="fa-solid fa-check check-icon"></i> All Pro Features</li>
+                        <li><i class="fa-solid fa-check check-icon"></i> Team Management</li>
+                        <li><i class="fa-solid fa-check check-icon"></i> Coach Access</li>
+                        <li><i class="fa-solid fa-check check-icon"></i> Brand Sponsorships</li>
+                    </ul>
+                    <a href="payment.html" class="btn btn-outline" style="width: 100%;">Join Elite</a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Community Wall Section -->
+    <section id="community">
+        <div class="container">
+            <div class="section-header">
+                <h2 class="section-title">Community <span class="text-gradient">Wall</span></h2>
+                <p class="section-desc">See what our athletes are achieving right now.</p>
+            </div>
+            <div class="grid-cols-3">
+                <div class="glass-card wall-post">
+                    <div class="wall-header">
+                        <img src="https://ui-avatars.com/api/?name=Sarah+J&background=random" class="wall-avatar"
+                            alt="User">
+                        <div class="wall-meta">
+                            <h4>Sarah Jenkins</h4>
+                            <span>2 hours ago</span>
+                        </div>
+                    </div>
+                    <img src="https://images.unsplash.com/photo-1517649763962-0c623066013b?q=80&w=2070&auto=format&fit=crop"
+                        class="wall-image" alt="Training">
+                    <div class="wall-content">
+                        Just crushed my 5K personal best! Thanks to the new training plan. 🏃‍♀️💨 #PersonalBest
+                        #Running
+                    </div>
+                    <div style="display: flex; gap: 1rem; color: var(--text-muted); font-size: 0.9rem;">
+                        <span><i class="fa-regular fa-heart"></i> 24</span>
+                        <span><i class="fa-regular fa-comment"></i> 5</span>
+                    </div>
+                </div>
+                <div class="glass-card wall-post">
+                    <div class="wall-header">
+                        <img src="https://ui-avatars.com/api/?name=Mike+T&background=random" class="wall-avatar"
+                            alt="User">
+                        <div class="wall-meta">
+                            <h4>Mike Tyson</h4>
+                            <span>5 hours ago</span>
+                        </div>
+                    </div>
+                    <img src="https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=2070&auto=format&fit=crop"
+                        class="wall-image" alt="Gym">
+                    <div class="wall-content">
+                        Early morning grind. No excuses. 💪 The gym was empty but the motivation was full.
+                    </div>
+                    <div style="display: flex; gap: 1rem; color: var(--text-muted); font-size: 0.9rem;">
+                        <span><i class="fa-regular fa-heart"></i> 156</span>
+                        <span><i class="fa-regular fa-comment"></i> 12</span>
+                    </div>
+                </div>
+                <div class="glass-card wall-post">
+                    <div class="wall-header">
+                        <img src="https://ui-avatars.com/api/?name=Emma+W&background=random" class="wall-avatar"
+                            alt="User">
+                        <div class="wall-meta">
+                            <h4>Emma Watson</h4>
+                            <span>1 day ago</span>
+                        </div>
+                    </div>
+                    <img src="https://images.unsplash.com/photo-1552674605-469555942850?q=80&w=2073&auto=format&fit=crop"
+                        class="wall-image" alt="Cycling">
+                    <div class="wall-content">
+                        Completed the Tour de City challenge! 🚴‍♀️ The view from the top was worth every pedal.
+                    </div>
+                    <div style="display: flex; gap: 1rem; color: var(--text-muted); font-size: 0.9rem;">
+                        <span><i class="fa-regular fa-heart"></i> 89</span>
+                        <span><i class="fa-regular fa-comment"></i> 8</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer
+        style="padding: 4rem 0; background: rgba(0,0,0,0.5); border-top: 1px solid rgba(255,255,255,0.1); margin-top: 0;">
+        <div class="container">
+            <div class="grid-cols-3" style="text-align: left; margin-bottom: 3rem;">
+                <div>
+                    <h3 class="nav-logo" style="font-size: 1.5rem; margin: 0 0 1rem 0;">ATHLETES</h3>
+                    <p style="color: var(--text-muted);">
+                        Empowering athletes worldwide to reach their full potential through technology and
+                        community.
+                    </p>
+                </div>
+                <div>
+                    <h4 style="margin-bottom: 1rem;">Quick Links</h4>
+                    <ul style="list-style: none; color: var(--text-muted);">
+                        <li style="margin-bottom: 0.5rem;"><a href="index.html">Home</a></li>
+                        <li style="margin-bottom: 0.5rem;"><a href="events.html">Events</a></li>
+                        <li style="margin-bottom: 0.5rem;"><a href="leaderboard.html">Leaderboard</a></li>
+                        <li style="margin-bottom: 0.5rem;"><a href="dashboard.html">Dashboard</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 style="margin-bottom: 1rem;">Connect <span class="text-gradient">With Us</span></h4>
+                    <div style="display: flex; gap: 1rem; font-size: 1.5rem;">
+                        <a href="#"><i class="fa-brands fa-twitter text-gradient"></i></a>
+                        <a href="#"><i class="fa-brands fa-instagram text-gradient"></i></a>
+                        <a href="#"><i class="fa-brands fa-strava text-gradient"></i></a>
+                    </div>
+                </div>
+            </div>
+
+            <div style="text-align: center; padding-top: 2rem; border-top: 1px solid rgba(255,255,255,0.05);">
+                <p style="color: var(--text-muted); margin-bottom: 1rem;">&copy; 2026 ATHLETES. All rights reserved.
+                </p>
+                <div style="display: flex; justify-content: center; gap: 2rem;">
+                    <a href="privacy.html" style="color: var(--text-muted); text-decoration: none;">Privacy
+                        Policy</a>
+                    <a href="terms.html" style="color: var(--text-muted); text-decoration: none;">Terms of
+                        Service</a>
+                </div>
+                <p style="color: var(--text-muted); font-size: 0.8rem; margin-top: 1.5rem;">
+                    Powered by Strava
+                </p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="js/supabase.js"></script>
+    <script src="js/script.js?v=1.6"></script>
+</body>
+
+</html>

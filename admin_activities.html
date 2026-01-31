@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin - Strava Activities (Live)</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .admin-container {
+            padding-top: calc(var(--header-height) + 2rem);
+            padding-bottom: 4rem;
+        }
+
+        .admin-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card-mini {
+            background: linear-gradient(135deg, rgba(168, 85, 247, 0.1), rgba(6, 182, 212, 0.1));
+            border: 1px solid var(--border);
+            padding: 1.25rem;
+            border-radius: 0.75rem;
+            text-align: center;
+        }
+
+        .stat-card-mini .value {
+            font-size: 2rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .stat-card-mini .label {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-top: 0.25rem;
+        }
+
+        .filter-section {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            margin-bottom: 2rem;
+            align-items: center;
+        }
+
+        .filter-section select,
+        .filter-section input {
+            min-width: 150px;
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid var(--border);
+            color: var(--text-main);
+            padding: 0.6rem 1rem;
+            border-radius: 0.5rem;
+        }
+
+        .activities-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .activities-table th,
+        .activities-table td {
+            padding: 1rem;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .activities-table th {
+            background: rgba(0, 0, 0, 0.3);
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 0.75rem;
+            letter-spacing: 1px;
+            color: var(--text-muted);
+        }
+
+        .activities-table tr:hover {
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        .type-badge {
+            padding: 0.25rem 0.75rem;
+            border-radius: 1rem;
+            font-size: 0.7rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .type-run { background: rgba(239, 68, 68, 0.15); color: #ef4444; }
+        .type-cycling { background: rgba(34, 197, 94, 0.15); color: #22c55e; }
+        .type-walk { background: rgba(59, 130, 246, 0.15); color: #3b82f6; }
+        .type-hiking { background: rgba(234, 179, 8, 0.15); color: #eab308; }
+        .type-swimming { background: rgba(6, 182, 212, 0.15); color: #06b6d4; }
+        .type-other { background: rgba(168, 85, 247, 0.15); color: #a855f7; }
+
+        .pagination {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 1rem;
+            margin-top: 2rem;
+        }
+
+        .live-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: rgba(34, 197, 94, 0.15);
+            color: #22c55e;
+            padding: 0.5rem 1rem;
+            border-radius: 2rem;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        .live-badge::before {
+            content: '';
+            width: 8px;
+            height: 8px;
+            background: #22c55e;
+            border-radius: 50%;
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .user-card {
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid var(--border);
+            border-radius: 0.75rem;
+            padding: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .user-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            padding: 0.5rem;
+        }
+
+        .user-card-header:hover {
+            background: rgba(255, 255, 255, 0.02);
+            border-radius: 0.5rem;
+        }
+
+        .user-activities {
+            display: none;
+            margin-top: 1rem;
+            padding-top: 1rem;
+            border-top: 1px solid var(--border);
+        }
+
+        .user-activities.show {
+            display: block;
+        }
+
+        .loading-spinner {
+            text-align: center;
+            padding: 2rem;
+            color: var(--text-muted);
+        }
+
+        @media (max-width: 768px) {
+            .activities-table { display: block; overflow-x: auto; }
+            .filter-section { flex-direction: column; }
+            .filter-section select, .filter-section input { width: 100%; }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="bg-glow"></div>
+
+    <nav class="navbar">
+        <a href="index.html" class="nav-logo">ATHLETES</a>
+        <div class="nav-links"></div>
+    </nav>
+
+    <div class="container admin-container">
+        <div class="glass-card">
+            <div class="admin-header">
+                <div>
+                    <h2 class="text-gradient">Strava Activities</h2>
+                    <span class="live-badge">LIVE FROM STRAVA API</span>
+                </div>
+                <button class="btn btn-primary" onclick="refreshAllData()">
+                    <i class="fas fa-sync"></i> Refresh All
+                </button>
+            </div>
+
+            <!-- Stats -->
+            <div class="stats-grid">
+                <div class="stat-card-mini">
+                    <div class="value" id="totalUsers">0</div>
+                    <div class="label">Strava Connected</div>
+                </div>
+                <div class="stat-card-mini">
+                    <div class="value" id="totalActivities">0</div>
+                    <div class="label">Total Activities</div>
+                </div>
+                <div class="stat-card-mini">
+                    <div class="value" id="totalDistance">0</div>
+                    <div class="label">Total KM</div>
+                </div>
+            </div>
+
+            <!-- Filter by User -->
+            <div class="filter-section">
+                <select id="userFilter">
+                    <option value="all">All Users</option>
+                </select>
+                <select id="typeFilter">
+                    <option value="all">All Types</option>
+                    <option value="run">Run</option>
+                    <option value="cycling">Cycling</option>
+                    <option value="walk">Walk</option>
+                    <option value="hiking">Hiking</option>
+                    <option value="swimming">Swimming</option>
+                </select>
+                <button class="btn btn-outline btn-sm" onclick="clearFilters()">Clear Filters</button>
+            </div>
+
+            <!-- Users List with Activities -->
+            <div id="usersContainer">
+                <div class="loading-spinner">
+                    <i class="fa-solid fa-spinner fa-spin fa-2x"></i>
+                    <p>Loading users and fetching activities from Strava...</p>
+                </div>
+            </div>
+
+            <div id="lastUpdated" style="text-align: center; padding: 1rem; color: var(--text-muted); font-size: 0.8rem;"></div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" crossorigin></script>
+    <script src="js/supabase.js"></script>
+    <script src="js/strava_config.js"></script>
+    <script src="js/strava_api.js"></script>
+    <script src="js/script.js?v=1.8"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            const supabase = window.supabaseClient;
+            let allUsersData = [];
+
+            // Check Admin Access
+            async function checkAdmin() {
+                const { data: { session } } = await supabase.auth.getSession();
+                if (!session) {
+                    window.location.href = 'login.html';
+                    return false;
+                }
+
+                const { data } = await supabase
+                    .from('profiles')
+                    .select('role')
+                    .eq('email', session.user.email)
+                    .single();
+
+                if (data?.role !== 'admin') {
+                    alert('Access Denied.');
+                    window.location.href = 'index.html';
+                    return false;
+                }
+                return true;
+            }
+
+            async function init() {
+                if (!await checkAdmin()) return;
+                await loadAllUsersActivities();
+            }
+
+            async function loadAllUsersActivities() {
+                const container = document.getElementById('usersContainer');
+                container.innerHTML = `
+                    <div class="loading-spinner">
+                        <i class="fa-solid fa-spinner fa-spin fa-2x"></i>
+                        <p>Fetching activities from Strava API for all users...</p>
+                    </div>
+                `;
+
+                // Fetch all users with Strava connected
+                const { data: profiles, error } = await supabase
+                    .from('profiles')
+                    .select('email, first_name, last_name, strava_connected, strava_access_token, strava_refresh_token, strava_token_expires_at')
+                    .eq('strava_connected', true);
+
+                if (error) {
+                    container.innerHTML = `<div style="color: #ef4444; text-align: center;">Error loading users: ${error.message}</div>`;
+                    return;
+                }
+
+                if (!profiles || profiles.length === 0) {
+                    container.innerHTML = `<div style="text-align: center; padding: 2rem; color: var(--text-muted);">No users have connected Strava yet.</div>`;
+                    return;
+                }
+
+                // Update user filter dropdown
+                const userFilter = document.getElementById('userFilter');
+                userFilter.innerHTML = '<option value="all">All Users</option>' +
+                    profiles.map(p => `<option value="${p.email}">${p.first_name || ''} ${p.last_name || ''} (${p.email})</option>`).join('');
+
+                // Fetch activities for each user from Strava API
+                allUsersData = [];
+                let totalActivities = 0;
+                let totalDistance = 0;
+
+                for (const profile of profiles) {
+                    try {
+                        const activities = await StravaAPI.fetchActivitiesOnDemand(profile.email, profile, { forceRefresh: false });
+                        allUsersData.push({
+                            profile: profile,
+                            activities: activities,
+                            error: null
+                        });
+                        totalActivities += activities.length;
+                        totalDistance += activities.reduce((sum, a) => sum + (a.distance || 0), 0);
+                    } catch (err) {
+                        console.error(`Error fetching for ${profile.email}:`, err);
+                        allUsersData.push({
+                            profile: profile,
+                            activities: [],
+                            error: err.message
+                        });
+                    }
+                }
+
+                // Update stats
+                document.getElementById('totalUsers').textContent = profiles.length;
+                document.getElementById('totalActivities').textContent = totalActivities;
+                document.getElementById('totalDistance').textContent = (totalDistance / 1000).toFixed(0);
+
+                renderUsers();
+
+                document.getElementById('lastUpdated').innerHTML =
+                    `<i class="fa-solid fa-clock"></i> Last fetched: ${new Date().toLocaleString()}`;
+            }
+
+            function renderUsers() {
+                const container = document.getElementById('usersContainer');
+                const userFilterValue = document.getElementById('userFilter').value;
+                const typeFilterValue = document.getElementById('typeFilter').value;
+
+                let filteredData = allUsersData;
+                if (userFilterValue !== 'all') {
+                    filteredData = allUsersData.filter(u => u.profile.email === userFilterValue);
+                }
+
+                if (filteredData.length === 0) {
+                    container.innerHTML = `<div style="text-align: center; padding: 2rem; color: var(--text-muted);">No users found.</div>`;
+                    return;
+                }
+
+                container.innerHTML = filteredData.map((userData, index) => {
+                    const { profile, activities, error } = userData;
+                    const name = `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || profile.email.split('@')[0];
+
+                    // Filter activities by type
+                    let filteredActivities = activities;
+                    if (typeFilterValue !== 'all') {
+                        filteredActivities = activities.filter(a => a.type?.toLowerCase() === typeFilterValue);
+                    }
+
+                    const totalKm = (filteredActivities.reduce((sum, a) => sum + (a.distance || 0), 0) / 1000).toFixed(2);
+
+                    return `
+                        <div class="user-card">
+                            <div class="user-card-header" onclick="toggleUserActivities(${index})">
+                                <div>
+                                    <strong style="font-size: 1.1rem;">${name}</strong>
+                                    <div style="font-size: 0.8rem; color: var(--text-muted);">${profile.email}</div>
+                                </div>
+                                <div style="text-align: right;">
+                                    ${error ? `<span style="color: #ef4444;"><i class="fa-solid fa-exclamation-triangle"></i> Error</span>` : `
+                                        <span style="color: var(--primary); font-weight: 600;">${filteredActivities.length} activities</span>
+                                        <div style="font-size: 0.8rem; color: var(--text-muted);">${totalKm} km</div>
+                                    `}
+                                    <i class="fa-solid fa-chevron-down" id="chevron-${index}" style="margin-left: 1rem;"></i>
+                                </div>
+                            </div>
+                            <div class="user-activities" id="activities-${index}">
+                                ${error ? `<div style="color: #ef4444; padding: 1rem;">Failed to fetch: ${error}</div>` :
+                                    filteredActivities.length === 0 ? `<div style="padding: 1rem; color: var(--text-muted);">No activities found.</div>` :
+                                    `<table class="activities-table">
+                                        <thead>
+                                            <tr>
+                                                <th>Activity</th>
+                                                <th>Type</th>
+                                                <th>Distance</th>
+                                                <th>Duration</th>
+                                                <th>Date</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            ${filteredActivities.slice(0, 20).map(act => {
+                                                const type = act.type?.toLowerCase() || 'other';
+                                                const typeClass = ['run', 'cycling', 'walk', 'hiking', 'swimming'].includes(type) ? type : 'other';
+                                                return `
+                                                    <tr>
+                                                        <td><strong>${act.name || 'Untitled'}</strong></td>
+                                                        <td><span class="type-badge type-${typeClass}">${act.type || 'Unknown'}</span></td>
+                                                        <td>${((act.distance || 0) / 1000).toFixed(2)} km</td>
+                                                        <td>${Math.floor((act.moving_time || 0) / 60)} min</td>
+                                                        <td>${new Date(act.start_date).toLocaleDateString()}</td>
+                                                    </tr>
+                                                `;
+                                            }).join('')}
+                                        </tbody>
+                                    </table>
+                                    ${filteredActivities.length > 20 ? `<div style="padding: 1rem; color: var(--text-muted); text-align: center;">Showing 20 of ${filteredActivities.length} activities</div>` : ''}
+                                    `
+                                }
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            }
+
+            window.toggleUserActivities = (index) => {
+                const el = document.getElementById(`activities-${index}`);
+                const chevron = document.getElementById(`chevron-${index}`);
+                if (el.classList.contains('show')) {
+                    el.classList.remove('show');
+                    chevron.style.transform = 'rotate(0deg)';
+                } else {
+                    el.classList.add('show');
+                    chevron.style.transform = 'rotate(180deg)';
+                }
+            };
+
+            window.refreshAllData = async () => {
+                // Clear all caches
+                allUsersData.forEach(u => {
+                    StravaAPI.clearCache(u.profile.email);
+                });
+                await loadAllUsersActivities();
+            };
+
+            window.clearFilters = () => {
+                document.getElementById('userFilter').value = 'all';
+                document.getElementById('typeFilter').value = 'all';
+                renderUsers();
+            };
+
+            // Filter listeners
+            document.getElementById('userFilter').addEventListener('change', renderUsers);
+            document.getElementById('typeFilter').addEventListener('change', renderUsers);
+
+            // Initialize
+            init();
+        });
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Debugger</title>
+    <style>
+        body {
+            font-family: monospace;
+            padding: 2rem;
+            background: #111;
+            color: #eee;
+        }
+
+        .log-item {
+            margin-bottom: 0.5rem;
+            border-bottom: 1px solid #333;
+            padding-bottom: 0.5rem;
+        }
+
+        .success {
+            color: #22c55e;
+        }
+
+        .error {
+            color: #ef4444;
+        }
+
+        .warn {
+            color: #eab308;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>System Diagnostic Tool</h1>
+    <div id="logs">Initializing...</div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" crossorigin></script>
+    <script src="js/supabase.js"></script>
+    <script>
+        const logs = document.getElementById('logs');
+        function log(msg, type = 'info') {
+            const div = document.createElement('div');
+            div.className = `log-item ${type}`;
+            div.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+            logs.appendChild(div);
+        }
+
+        async function runDiagnostics() {
+            logs.innerHTML = '';
+            const supabase = window.supabaseClient;
+
+            if (!supabase) {
+                log('CRITICAL: window.supabaseClient is undefined!', 'error');
+                return;
+            }
+            log('Supabase Client found.', 'success');
+
+            // 1. Check Auth
+            log('Checking Session...');
+            const { data: { session }, error: authError } = await supabase.auth.getSession();
+
+            if (authError) {
+                log('Auth Error: ' + authError.message, 'error');
+                return;
+            }
+
+            if (!session) {
+                log('No active session. Please log in first.', 'warn');
+                return;
+            }
+            log(`User Logged In: ${session.user.email}`, 'success');
+
+            // 2. Check RPC is_admin
+            log('Testing is_admin() RPC...');
+            try {
+                const { data: isAdmin, error: rpcError } = await supabase.rpc('is_admin');
+                if (rpcError) {
+                    log('RPC Error (is_admin): ' + rpcError.message, 'error');
+                    log('Hint: This often means recursion or permission issues.', 'warn');
+                } else {
+                    log(`is_admin() returned: ${isAdmin}`, isAdmin ? 'success' : 'warn');
+                }
+            } catch (e) {
+                log('RPC Exception: ' + e.message, 'error');
+            }
+
+            // 3. Check Profiles Access
+            log('Testing Profiles Table Access...');
+            const { data: profile, error: profileError } = await supabase
+                .from('profiles')
+                .select('*')
+                .eq('email', session.user.email)
+                .single();
+
+            if (profileError) {
+                log('Profiles Read Error: ' + profileError.message, 'error');
+            } else {
+                log(`Profile Read Success. Role: ${profile.role}`, 'success');
+            }
+
+            // 4. Check Events Access (Select)
+            log('Testing Events Table Read...');
+            const { data: events, error: eventsError } = await supabase
+                .from('events')
+                .select('*')
+                .limit(1);
+
+            if (eventsError) {
+                log('Events Read Error: ' + eventsError.message, 'error');
+            } else {
+                log(`Events Read Success. Count: ${events.length}`, 'success');
+            }
+
+            // 5. Test Insert (Dry Run - won't actually commit if we rollback, but here we just try and fail)
+            // Actually, let's just create a test object
+            log('Testing Events Table Insert...');
+            const testEvent = {
+                name: "Debug Event " + Date.now(),
+                start_date: new Date().toISOString(),
+                description: "Test",
+                price: 0
+            };
+
+            const { data: insertData, error: insertError } = await supabase
+                .from('events')
+                .insert([testEvent])
+                .select();
+
+            if (insertError) {
+                log('Events Insert Error: ' + insertError.message, 'error');
+            } else {
+                log('Events Insert Success!', 'success');
+                // Cleanup
+                if (insertData && insertData[0]) {
+                    const { error: delError } = await supabase.from('events').delete().eq('id', insertData[0].id);
+                    if (!delError) log('Cleaned up test event.', 'success');
+                }
+            }
+        }
+
+        runDiagnostics();
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,859 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin - Manage Users</title>
+    <link rel="stylesheet" href="css/style.css?v=2.0">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        .admin-container {
+            padding-top: calc(var(--header-height) + 2rem);
+            padding-bottom: 4rem;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.02));
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.5rem;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 2.5rem;
+            font-weight: 800;
+            color: #f97316;
+            line-height: 1.2;
+        }
+
+        .stat-label {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            margin-top: 0.5rem;
+        }
+
+        .search-bar {
+            width: 100%;
+            padding: 0.8rem 1rem 0.8rem 2.8rem;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text-main);
+            font-size: 0.95rem;
+        }
+
+        .search-bar:focus {
+            outline: none;
+            border-color: var(--primary);
+            background: rgba(255, 255, 255, 0.08);
+        }
+
+        .search-wrapper {
+            position: relative;
+            margin-bottom: 1.5rem;
+        }
+
+        .search-icon {
+            position: absolute;
+            left: 1rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-muted);
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        .table-container {
+            overflow-x: auto;
+        }
+
+        .users-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .users-table th,
+        .users-table td {
+            text-align: left;
+            padding: 1rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .users-table th {
+            color: var(--text-muted);
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 0.8rem;
+        }
+
+        .users-table tr:hover {
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        .role-badge {
+            padding: 0.2rem 0.6rem;
+            border-radius: 1rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .role-admin {
+            background: rgba(168, 85, 247, 0.1);
+            color: #a855f7;
+            border: 1px solid rgba(168, 85, 247, 0.2);
+        }
+
+        .role-user {
+            background: rgba(14, 165, 233, 0.1);
+            color: #0ea5e9;
+            border: 1px solid rgba(14, 165, 233, 0.2);
+        }
+
+        .details-row {
+            display: none;
+            background: rgba(0, 0, 0, 0.3);
+        }
+
+        .details-row.show {
+            display: table-row;
+        }
+
+        .details-content {
+            padding: 2rem;
+        }
+
+        .details-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .detail-section {
+            background: rgba(255, 255, 255, 0.02);
+            padding: 1.5rem;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+        }
+
+        .detail-section h4 {
+            color: var(--primary);
+            margin-bottom: 1rem;
+            font-size: 1rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .detail-item {
+            margin-bottom: 0.8rem;
+        }
+
+        .detail-label {
+            color: var(--text-muted);
+            font-size: 0.8rem;
+            margin-bottom: 0.2rem;
+        }
+
+        .detail-value {
+            color: var(--text-main);
+            font-weight: 500;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 0.5rem;
+            margin-top: 1.5rem;
+        }
+
+        /* Edit Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.show {
+            display: flex;
+        }
+
+        .modal-content {
+            background: var(--bg-dark);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 2rem;
+            max-width: 800px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .close-btn {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            font-size: 1.5rem;
+            cursor: pointer;
+            transition: color 0.3s;
+        }
+
+        .close-btn:hover {
+            color: var(--text-main);
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+
+        .form-group {
+            margin-bottom: 1rem;
+        }
+
+        .form-group.full-width {
+            grid-column: span 2;
+        }
+
+        .form-label {
+            display: block;
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            margin-bottom: 0.4rem;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 0.7rem;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            color: var(--text-main);
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+
+        .btn-sm {
+            padding: 0.4rem 0.8rem;
+            font-size: 0.85rem;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="bg-glow"></div>
+
+    <nav class="navbar">
+        <a href="index.html" class="nav-logo">ATHLETES</a>
+        <div class="nav-links">
+            <a href="index.html" class="nav-link">Home</a>
+            <a href="admin_dashboard.html" class="nav-link">Dashboard</a>
+            <a href="#" id="logoutBtn" class="nav-link">Logout</a>
+        </div>
+    </nav>
+
+    <div class="container admin-container">
+        <!-- Stats Cards -->
+        <div class="stats-grid">
+            <div class="glass-card stat-card">
+                <h3>Total Users</h3>
+                <div class="stat-value" id="totalUsers">0</div>
+            </div>
+            <div class="glass-card stat-card">
+                <h3>Admins</h3>
+                <div class="stat-value" id="adminCount">0</div>
+            </div>
+        </div>
+
+        <h1 class="text-gradient" style="font-size: 3rem; margin-bottom: 2rem;">User Management</h1>
+
+        <div class="glass-card" style="margin-bottom: 2rem; padding: 1.5rem;">
+            <div style="display: flex; gap: 1rem; align-items: center;">
+                <div style="position: relative; flex: 1;">
+                    <i class="fas fa-search"
+                        style="position: absolute; left: 1rem; top: 50%; transform: translateY(-50%); color: var(--text-muted);"></i>
+                    <input type="text" id="searchInput" placeholder="Search by name, email, or phone..."
+                        style="width: 100%; padding: 0.8rem 1rem 0.8rem 2.8rem; background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 8px; color: var(--text-main); font-size: 1rem; outline: none;">
+                </div>
+                <button class="btn btn-primary" onclick="window.exportToCSV()"
+                    style="white-space: nowrap; height: 46px; display: flex; align-items: center; gap: 0.5rem; padding: 0 1.5rem;">
+                    <i class="fas fa-download"></i> Export CSV
+                </button>
+            </div>
+        </div>
+
+        <div class="glass-card table-container">
+            <table class="users-table">
+                <thead>
+                    <tr>
+                        <th>Email</th>
+                        <th>Name</th>
+                        <th>Phone</th>
+                        <th style="text-align: center;">Role</th>
+                        <th style="text-align: center;">Joined</th>
+                        <th style="text-align: right;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="usersList">
+                    <tr>
+                        <td colspan="6" style="text-align: center; padding: 2rem;">Loading users...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Edit User Modal -->
+    <div id="editModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="text-gradient">Edit User Details</h3>
+                <button class="close-btn" onclick="closeEditModal()">&times;</button>
+            </div>
+            <form id="editForm">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label class="form-label">First Name</label>
+                        <input type="text" id="editFirstName" class="form-input" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Last Name</label>
+                        <input type="text" id="editLastName" class="form-input" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Date of Birth</label>
+                        <input type="text" id="editDob" class="form-input">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Gender</label>
+                        <select id="editGender" class="form-input">
+                            <option value="Male">Male</option>
+                            <option value="Female">Female</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Blood Group</label>
+                        <input type="text" id="editBloodGroup" class="form-input">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Phone</label>
+                        <input type="tel" id="editPhone" class="form-input" required>
+                    </div>
+                    <div class="form-group full-width">
+                        <label class="form-label">Medical Issues</label>
+                        <input type="text" id="editMedicalIssues" class="form-input">
+                    </div>
+                    <div class="form-group full-width">
+                        <label class="form-label">Address</label>
+                        <input type="text" id="editAddress" class="form-input">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">City</label>
+                        <input type="text" id="editCity" class="form-input">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">State</label>
+                        <input type="text" id="editState" class="form-input">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Pincode</label>
+                        <input type="text" id="editPincode" class="form-input">
+                    </div>
+                </div>
+                <div style="display: flex; gap: 1rem; margin-top: 1.5rem;">
+                    <button type="submit" class="btn btn-primary" style="flex: 1;">Save Changes</button>
+                    <button type="button" class="btn btn-outline" onclick="closeEditModal()"
+                        style="flex: 1;">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Create User Modal -->
+    <div id="createUserModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="text-gradient">Create New User</h3>
+                <button class="close-btn" onclick="closeCreateUserModal()">&times;</button>
+            </div>
+            <form id="createUserForm">
+                <div class="form-grid">
+                    <div class="form-group full-width">
+                        <label class="form-label">Email Address</label>
+                        <input type="email" id="newEmail" class="form-input" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Password</label>
+                        <input type="password" id="newPassword" class="form-input" required minlength="6">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Role</label>
+                        <select id="newRole" class="form-input">
+                            <option value="user">User</option>
+                            <option value="admin">Admin</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">First Name</label>
+                        <input type="text" id="newFirstName" class="form-input" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Last Name</label>
+                        <input type="text" id="newLastName" class="form-input" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Phone</label>
+                        <input type="tel" id="newPhone" class="form-input" required>
+                    </div>
+                </div>
+                <div style="display: flex; gap: 1rem; margin-top: 1.5rem;">
+                    <button type="submit" class="btn btn-primary" style="flex: 1;">Create User</button>
+                    <button type="button" class="btn btn-outline" onclick="closeCreateUserModal()"
+                        style="flex: 1;">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" crossorigin></script>
+    <script src="js/supabase.js"></script>
+    <script src="js/script.js?v=1.7"></script>
+    <script>
+        let allUsers = [];
+        let currentEditEmail = null;
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            const supabase = window.supabaseClient;
+            const usersList = document.getElementById('usersList');
+            const searchBar = document.getElementById('searchInput'); // Fixed ID
+
+            // Search functionality
+            searchBar.addEventListener('input', (e) => {
+                const query = e.target.value.toLowerCase();
+                const filtered = allUsers.filter(user => {
+                    const name = `${user.first_name || ''} ${user.last_name || ''}`.toLowerCase();
+                    const email = (user.email || '').toLowerCase();
+                    const phone = (user.phone || '').toLowerCase();
+                    return name.includes(query) || email.includes(query) || phone.includes(query);
+                });
+                renderUsers(filtered);
+            });
+
+            async function initAdmin() {
+                // Check Session
+                const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+                if (!session) {
+                    window.location.href = 'login.html';
+                    return;
+                }
+
+                const userEmail = session.user.email;
+                const { data, error } = await supabase
+                    .from('profiles')
+                    .select('role')
+                    .eq('email', userEmail)
+                    .single();
+
+                if (error || data?.role !== 'admin') {
+                    alert('Access Denied. Admins only.');
+                    await supabase.auth.signOut();
+                    window.location.href = 'index.html';
+                    return;
+                }
+
+                loadUsers();
+            }
+
+            async function loadUsers() {
+                const { data, error } = await supabase
+                    .from('profiles')
+                    .select('*')
+                    .order('created_at', { ascending: false });
+
+                if (error) {
+                    console.error('Error fetching users:', error);
+                    usersList.innerHTML = '<tr><td colspan="6" style="color: #ef4444; text-align: center;">Error loading users.</td></tr>';
+                    return;
+                }
+
+                console.log('Loaded users:', data);
+                allUsers = data || [];
+                renderUsers(allUsers);
+
+                // Update stats
+                document.getElementById('totalUsers').textContent = allUsers.length;
+                document.getElementById('adminCount').textContent = allUsers.filter(u => u.role === 'admin').length;
+            }
+
+            function renderUsers(users) {
+                if (users.length === 0) {
+                    usersList.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 2rem;">No users found.</td></tr>';
+                    return;
+                }
+
+                usersList.innerHTML = users.map(user => {
+                    const isAdmin = user.role === 'admin';
+                    const name = `${user.first_name || ''} ${user.last_name || ''}`.trim() || 'N/A';
+                    const joinDate = user.created_at ? new Date(user.created_at).toLocaleDateString() : 'N/A';
+
+                    return `
+                        <tr>
+                            <td>${user.email}</td>
+                            <td>${name}</td>
+                            <td>${user.phone || 'N/A'}</td>
+                            <td style="text-align: center;">
+                                <span class="role-badge ${user.role === 'admin' ? 'role-admin' : 'role-user'}">
+                                    ${user.role?.toUpperCase() || 'USER'}
+                                </span>
+                            </td>
+                            <td style="text-align: center;">${joinDate}</td>
+                            <td style="text-align: right;">
+                                <div style="display: flex; justify-content: flex-end;">
+                                    <button class="btn btn-primary btn-sm" onclick="toggleDetails('${user.email}')" style="display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.4rem 0.8rem;">
+                                        <i class="fas fa-eye"></i> View
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr id="details-${user.email.replace(/[^a-z0-9]/gi, '')}" class="details-row">
+                            <td colspan="6">
+                                <div class="details-content" id="content-${user.email.replace(/[^a-z0-9]/gi, '')}">
+                                    Loading details...
+                                </div>
+                            </td>
+                        </tr>
+                    `;
+                }).join('');
+            }
+
+            // Edit User Logic
+            window.openEditUser = window.openEditModal = (email) => {
+                const user = allUsers.find(u => u.email === email);
+                if (!user) return;
+
+                currentEditEmail = email;
+
+                document.getElementById('editFirstName').value = user.first_name || '';
+                document.getElementById('editLastName').value = user.last_name || '';
+                document.getElementById('editDob').value = user.dob || '';
+                document.getElementById('editGender').value = user.gender || 'Male';
+                document.getElementById('editBloodGroup').value = user.blood_group || '';
+                document.getElementById('editPhone').value = user.phone || '';
+                document.getElementById('editMedicalIssues').value = user.medical_issues || '';
+                document.getElementById('editAddress').value = user.address || '';
+                document.getElementById('editCity').value = user.city || '';
+                document.getElementById('editState').value = user.state || '';
+                document.getElementById('editPincode').value = user.pincode || '';
+
+                // Show modal
+                const modal = document.getElementById('editModal');
+                modal.style.display = 'block';
+                setTimeout(() => modal.classList.add('show'), 10);
+            };
+
+            window.closeEditModal = () => {
+                const modal = document.getElementById('editModal');
+                modal.classList.remove('show');
+                setTimeout(() => {
+                    modal.style.display = 'none';
+                    currentEditEmail = null;
+                }, 300);
+            };
+
+            // Handle Edit Form Submit
+            const editForm = document.getElementById('editForm');
+            if (editForm) {
+                editForm.onsubmit = async (e) => {
+                    e.preventDefault();
+                    if (!currentEditEmail) return;
+
+                    const btn = editForm.querySelector('button[type="submit"]');
+                    const originalText = btn.innerHTML;
+                    btn.disabled = true;
+                    btn.innerHTML = 'Saving...';
+
+                    try {
+                        const { error } = await supabase
+                            .from('profiles')
+                            .update({
+                                first_name: document.getElementById('editFirstName').value,
+                                last_name: document.getElementById('editLastName').value,
+                                dob: document.getElementById('editDob').value,
+                                gender: document.getElementById('editGender').value,
+                                blood_group: document.getElementById('editBloodGroup').value,
+                                phone: document.getElementById('editPhone').value,
+                                medical_issues: document.getElementById('editMedicalIssues').value,
+                                address: document.getElementById('editAddress').value,
+                                city: document.getElementById('editCity').value,
+                                state: document.getElementById('editState').value,
+                                pincode: document.getElementById('editPincode').value
+                            })
+                            .eq('email', currentEditEmail);
+
+                        if (error) throw error;
+
+                        alert('User details updated!');
+                        closeEditModal();
+                        loadUsers();
+
+                    } catch (err) {
+                        console.error('Update failed:', err);
+                        alert('Update failed: ' + err.message);
+                    } finally {
+                        btn.disabled = false;
+                        btn.innerHTML = originalText;
+                    }
+                };
+            }
+
+            // Expose loadUsers for script.js
+            window.fetchAllUsers = loadUsers;
+
+            window.toggleDetails = async (email) => {
+                const safeEmail = email.replace(/[^a-z0-9]/gi, '');
+                const detailsRow = document.getElementById(`details-${safeEmail}`);
+                const contentDiv = document.getElementById(`content-${safeEmail}`);
+
+                if (detailsRow.classList.contains('show')) {
+                    detailsRow.classList.remove('show');
+                    return;
+                }
+
+                // Load full details
+                const user = allUsers.find(u => u.email === email);
+                if (!user) return;
+
+                // Fetch event registrations
+                const { data: registrations } = await supabase
+                    .from('event_registrations')
+                    .select('*, events(name, start_date)')
+                    .eq('user_email', email);
+
+                // Fetch Strava activities
+                const { data: activities } = await supabase
+                    .from('strava_activities')
+                    .select('*')
+                    .eq('user_email', email)
+                    .order('start_date', { ascending: false })
+                    .limit(5);
+
+                contentDiv.innerHTML = `
+                    <div class="details-grid">
+                        <div class="detail-section">
+                            <h4><i class="fas fa-user"></i> Personal Info</h4>
+                            <div class="detail-item">
+                                <div class="detail-label">Full Name</div>
+                                <div class="detail-value">${user.first_name || ''} ${user.last_name || ''}</div>
+                            </div>
+                            <div class="detail-item">
+                                <div class="detail-label">Date of Birth</div>
+                                <div class="detail-value">${user.dob || 'N/A'}</div>
+                            </div>
+                            <div class="detail-item">
+                                <div class="detail-label">Gender</div>
+                                <div class="detail-value">${user.gender || 'N/A'}</div>
+                            </div>
+                            <div class="detail-item">
+                                <div class="detail-label">Blood Group</div>
+                                <div class="detail-value">${user.blood_group || 'N/A'}</div>
+                            </div>
+                            <div class="detail-item">
+                                <div class="detail-label">Medical Issues</div>
+                                <div class="detail-value">${user.medical_issues || 'None'}</div>
+                            </div>
+                        </div>
+
+                        <div class="detail-section">
+                            <h4><i class="fas fa-phone"></i> Contact Info</h4>
+                            <div class="detail-item">
+                                <div class="detail-label">Email</div>
+                                <div class="detail-value">${user.email}</div>
+                            </div>
+                            <div class="detail-item">
+                                <div class="detail-label">Phone</div>
+                                <div class="detail-value">${user.phone || 'N/A'}</div>
+                            </div>
+                            <div class="detail-item">
+                                <div class="detail-label">WhatsApp</div>
+                                <div class="detail-value">${user.whatsapp_number || 'Same as phone'}</div>
+                            </div>
+                        </div>
+
+                        <div class="detail-section">
+                            <h4><i class="fas fa-map-marker-alt"></i> Address</h4>
+                            <div class="detail-item">
+                                <div class="detail-value">${user.address || 'N/A'}</div>
+                            </div>
+                            <div class="detail-item">
+                                <div class="detail-value">${user.city || ''}, ${user.state || ''} - ${user.pincode || ''}</div>
+                            </div>
+                        </div>
+
+                        <div class="detail-section">
+                            <h4><i class="fas fa-running"></i> Strava</h4>
+                            <div class="detail-item">
+                                <div class="detail-label">Status</div>
+                                <div class="detail-value">${user.strava_connected ? '✅ Connected' : '❌ Not Connected'}</div>
+                            </div>
+                            <div class="detail-item">
+                                <div class="detail-label">Total Activities</div>
+                                <div class="detail-value">${activities?.length || 0}</div>
+                            </div>
+                            ${activities && activities.length > 0 ? `
+                                <div class="detail-item">
+                                    <div class="detail-label">Recent Activity</div>
+                                    <div class="detail-value">${activities[0].name}</div>
+                                </div>
+                            ` : ''}
+                        </div>
+
+                        <div class="detail-section" style="grid-column: span 2;">
+                            <h4><i class="fas fa-calendar"></i> Event Registrations (${registrations?.length || 0})</h4>
+                            ${registrations && registrations.length > 0 ?
+                        registrations.map(reg => `
+                                    <div class="detail-item">
+                                        <div class="detail-value">${reg.events?.name || 'Unknown Event'} - 
+                                            <span style="color: ${reg.payment_status === 'paid' ? '#22c55e' : '#eab308'};">
+                                                ${reg.payment_status?.toUpperCase()}
+                                            </span>
+                                        </div>
+                                    </div>
+                                `).join('')
+                        : '<div class="detail-value">No event registrations</div>'
+                    }
+                        </div>
+                    </div>
+
+                    <div class="action-buttons">
+                        <button class="btn btn-primary" onclick="openEditModal('${email}')">
+                            <i class="fas fa-edit"></i> Edit Details
+                        </button>
+                        <button class="btn ${user.role === 'admin' ? 'btn-outline' : 'btn-primary'}" 
+                            onclick="toggleAdmin('${email}', ${user.role !== 'admin'})">
+                            <i class="fas fa-user-shield"></i> ${user.role === 'admin' ? 'Revoke Admin' : 'Make Admin'}
+                        </button>
+                        <button class="btn btn-outline" style="color: #ef4444; border-color: #ef4444;" 
+                            onclick="deleteUser('${email}')">
+                            <i class="fas fa-trash"></i> Delete User
+                        </button>
+                    </div>
+                `;
+
+                detailsRow.classList.add('show');
+            };
+
+
+
+            window.toggleAdmin = async (email, makeAdmin) => {
+                if (makeAdmin && !confirm(`Make ${email} an Admin?`)) return;
+                if (!makeAdmin && !confirm(`Revoke Admin access for ${email}?`)) return;
+
+                const { error } = await supabase
+                    .from('profiles')
+                    .update({ role: makeAdmin ? 'admin' : 'user' })
+                    .eq('email', email);
+
+                if (error) {
+                    alert('Error: ' + error.message);
+                } else {
+                    alert(`User role updated!`);
+                    loadUsers();
+                }
+            };
+
+            window.exportToCSV = () => {
+                if (!allUsers || allUsers.length === 0) {
+                    alert("No data to export");
+                    return;
+                }
+
+                // Define headers
+                const headers = [
+                    "Email", "First Name", "Last Name", "Phone", "Role",
+                    "Gender", "DOB", "Blood Group", "Medical Issues",
+                    "Address", "City", "State", "Pincode", "Joined Date"
+                ];
+
+                // Map data to CSV rows
+                const rows = allUsers.map(user => [
+                    user.email || "",
+                    user.first_name || "",
+                    user.last_name || "",
+                    user.phone || "",
+                    user.role || "user",
+                    user.gender || "",
+                    user.dob || "",
+                    user.blood_group || "",
+                    (user.medical_issues || "").replace(/,/g, ";"), // Prevent CSV breaking
+                    (user.address || "").replace(/,/g, " "),
+                    user.city || "",
+                    user.state || "",
+                    user.pincode || "",
+                    new Date(user.created_at).toLocaleDateString()
+                ]);
+
+                // Combine headers and rows
+                const csvContent = [
+                    headers.join(","),
+                    ...rows.map(e => e.map(cell => `"${cell}"`).join(",")) // Quote all cells
+                ].join("\n");
+
+                // Create download link
+                const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+                const link = document.createElement("a");
+                const url = URL.createObjectURL(blob);
+                link.setAttribute("href", url);
+                link.setAttribute("download", `users_export_${new Date().toISOString().split('T')[0]}.csv`);
+                link.style.visibility = 'hidden';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            };
+
+            window.deleteUser = async (email) => {
+                if (!confirm(`⚠️ DELETE USER: ${email}?\n\nThis will permanently delete:\n- User profile\n- Event registrations\n- Strava activities\n\nThis action CANNOT be undone!`)) return;
+
+                const { error } = await supabase
+                    .from('profiles')
+                    .delete()
+                    .eq('email', email);
+
+                if (error) {
+                    alert('Error deleting user: ' + error.message);
+                } else {
+                    alert('User deleted successfully!');
+                    loadUsers();
+                }
+            };
+
+            initAdmin();
+        });
+    </script>
+</body>
+
+</html>
