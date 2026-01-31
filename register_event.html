@@ -423,9 +423,31 @@
 
                 await supabase.from('profiles').upsert(profileData);
 
-                // Create Registration
+                // Create Registration or Check Existing
                 // Check if admin to auto-approve
                 const isAdmin = userEmail === 'shibukumarbe@gmail.com';
+
+                // Check for existing registration first
+                const { data: existingReg, error: checkError } = await supabase
+                    .from('event_registrations')
+                    .select('*')
+                    .eq('event_id', eventId)
+                    .eq('user_email', userEmail)
+                    .single();
+
+                if (existingReg) {
+                    if (existingReg.payment_status === 'paid') {
+                        alert('You are already registered for this event!');
+                        window.location.href = 'events.html';
+                        return;
+                    } else if (existingReg.payment_status === 'pending') {
+                        // Allow proceeding to payment
+                        const statusText = document.getElementById('statusText');
+                        statusText.innerHTML = '<span style="color: #eab308; font-weight: 600;">Status: Pending Payment Approval</span>';
+                        showStep(2);
+                        return;
+                    }
+                }
 
                 const { error } = await supabase.from('event_registrations').insert([
                     {
